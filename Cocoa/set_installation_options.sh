@@ -34,18 +34,18 @@ export COCOA_OUTPUT_VERBOSE=1
 # ------------------------------------------------------------------------------
 # The flags below allow users to skip downloading specific datasets ------------
 # ------------------------------------------------------------------------------
-#export IGNORE_ACTDR6_DATA=1
-#export IGNORE_BAO_DATA=1
+export IGNORE_ACTDR6_DATA=1
+export IGNORE_BAO_DATA=1
 export IGNORE_BICEP_CMB_DATA=1
-# export IGNORE_HOLICOW_STRONG_LENSING_DATA=1
-#export IGNORE_SN_DATA=1
-#export IGNORE_SPT_CMB_DATA=1
+ export IGNORE_HOLICOW_STRONG_LENSING_DATA=1
+export IGNORE_SN_DATA=1
+export IGNORE_SPT_CMB_DATA=1
 export IGNORE_SIMONS_OBSERVATORY_CMB_DATA=1
-#export IGNORE_PLANCK_CMB_DATA=1
+export IGNORE_PLANCK_CMB_DATA=1
 export IGNORE_CAMSPEC_CMB_DATA=1
 export IGNORE_LIPOP_CMB_DATA=1
 export IGNORE_COSMOPOWER_DATA=1
-#export IGNORE_EMULTRF_DATA=1 #SaraivanovZhongZhu (SZZ) transformer-based emul
+export IGNORE_EMULTRF_DATA=1 #SaraivanovZhongZhu (SZZ) transformer-based emul
 
 # ------------------------------------------------------------------------------
 # The keys below control which packages will be installed and compiled 
@@ -53,26 +53,26 @@ export IGNORE_COSMOPOWER_DATA=1
 #export IGNORE_CAMB_CODE=1
 #export IGNORE_CLASS_CODE=1 # Default: we just use CAMB (reduces compilation time)
 #export IGNORE_COSMOLIKE_CODE=1
-#export IGNORE_POLYCHORD_SAMPLER_CODE=1
-#export IGNORE_PLANCK_LIKELIHOOD_CODE=1
-#export IGNORE_ACTDR4_CODE=1
-#export IGNORE_ACTDR6_CODE=1
+export IGNORE_POLYCHORD_SAMPLER_CODE=1
+export IGNORE_PLANCK_LIKELIHOOD_CODE=1
+export IGNORE_ACTDR4_CODE=1
+export IGNORE_ACTDR6_CODE=1
 export IGNORE_CPP_CUBA_INSTALLATION=1
 export IGNORE_FGSPECTRA_CODE=1
 export IGNORE_VELOCILEPTORS_CODE=1
-#export IGNORE_SIMONS_OBSERVATORY_LIKELIHOOD_CODE=1
+export IGNORE_SIMONS_OBSERVATORY_LIKELIHOOD_CODE=1
 export IGNORE_CAMSPEC_LIKELIHOOD_CODE=1
 export IGNORE_LIPOP_LIKELIHOOD_CODE=1
 export IGNORE_HYREC_CODE=1
-#export IGNORE_COSMOREC_CODE=1
+export IGNORE_COSMOREC_CODE=1
 export IGNORE_MGCAMB_CODE=1
-#export IGNORE_EMULTRF_CODE=1     #SaraivanovZhongZhu (SZZ) transformer-based emul
+export IGNORE_EMULTRF_CODE=1     #SaraivanovZhongZhu (SZZ) transformer-based emul
 export IGNORE_COSMOPOWER_CODE=1   #unable to install cosmopower on modern Python
 #export IGNORE_EUCLID_EMULATOR_V2_CODE=1
 export IGNORE_DARK_EMULATOR_CODE=1
-#export IGNORE_NAUTILUS_SAMPLER_CODE=1
-#export IGNORE_DERIVKIT_CODE=1
-#export IGNORE_TENSIOMETER_CODE=1
+export IGNORE_NAUTILUS_SAMPLER_CODE=1
+export IGNORE_DERIVKIT_CODE=1
+export IGNORE_TENSIOMETER_CODE=1
 #export IGNORE_GETDIST_CODE=1 #dev getdist with code tweaks
 # ------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------
