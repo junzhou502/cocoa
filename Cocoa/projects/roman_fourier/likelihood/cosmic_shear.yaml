@@ -1,0 +1,36 @@
+path: null
+data_file: roman_fourier_M1_GGL0.05.dataset
+accuracyboost: 1.0
+integration_accuracy: 0
+kmax_boltzmann: 7.5
+speed: 1
+non_linear_emul: 2
+debug: False
+# IA REDSHIFT EVOLUTION: 0 = NO_IA (AMPLITUDES SET TO ZERO), 
+#                        1 = IA_NLA_LF
+#                        2 = IA_REDSHIFT_BINNING, 
+#                        3 = IA_REDSHIFT_EVOLUTION
+IA_redshift_evolution: 3
+# IA_MODEL: 0 = NLA, 1 = TATT
+IA_model: 0
+external_nz_modeling: 0
+use_emulator: False
+
+# exclude ggl nl-ns bin pairs (need even here to set the dv size)
+ggl_exclude: [[4,0],[5,0],[6,0],[6,1],[6,2],[7,0],[7,1],[7,2],[7,3]]
+
+# BIAS REDSHIFT EVOLUTION [b1,b2,bs2,b3,bmag] (see bias.c)
+#bias_model: [0,0,0,1,0]
+
+add_baryons_on_dv: False
+which_bsims_add_on_dv: "antilles-2"
+
+use_baryon_pca: False
+create_baryon_pca: False
+baryon_pca_select_sims: "antilles-2-99/antilles-101-378/antilles-380-400"
+filename_baryon_pca: "./projects/desy1xplanck/chains/pca.txt"
+
+print_datavector: False
+print_datavector_file: "./projects/roman_fourier/chains/roman_fourier_theory.modelvector"
+
+params: !defaults [params_source]

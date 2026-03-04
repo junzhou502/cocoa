@@ -1,0 +1,729 @@
+timing: True
+debug: False
+stop_at_error: False
+
+likelihood:
+  roman_fourier.combo_3x2pt:
+    path: ./projects/roman_fourier/data
+    data_file: roman_evaluate.dataset
+    accuracyboost: 1.0      
+    integration_accuracy: 0
+    kmax_boltzmann: 7.5
+    # 1 EE2, 2 Halofit
+    non_linear_emul: 2
+    IA_model: 0
+    IA_redshift_evolution: 3
+    ggl_exclude: []
+
+    print_datavector: True
+    print_datavector_file: ./projects/roman_fourier/chains/roman_setup0_evaluate/roman.modelvector
+    output_folder: ./projects/roman_fourier/chains/roman_setup0_evaluate/
+
+    adopt_limber_gg: 0
+    adopt_limber_gs: 1
+    adopt_RSD_gg: 1
+    adopt_RSD_gs: 1
+    NCell_interpolation: 300 #base:300
+    Na_interpolation: 225 #base:225
+    
+params:
+  As_1e9:
+    prior:
+      min: 1.1
+      max: 2.8
+    ref:
+      dist: norm
+      loc: 2.1
+      scale: 0.2
+    proposal: 0.2
+    latex: 10^9 A_\mathrm{s})
+    drop: true
+    renames: A
+  ns:
+    prior:
+      min: 0.87
+      max: 1.07
+    ref:
+      dist: norm
+      loc: 0.96605
+      scale: 0.01
+    proposal: 0.01
+    latex: n_\mathrm{s}
+  H0:
+    prior:
+      min: 60
+      max: 76
+    ref:
+      dist: norm
+      loc: 67.32
+      scale: 3
+    proposal: 3
+    latex: H_0
+  omegab:
+    prior:
+      min: 0.04
+      max: 0.055
+    ref:
+      dist: norm
+      loc: 0.0495
+      scale: 0.004
+    proposal: 0.004
+    latex: \Omega_\mathrm{b}
+    drop: true
+  omegam:
+    prior:
+      min: 0.1
+      max: 0.6
+    ref:
+      dist: norm
+      loc: 0.316
+      scale: 0.015
+    proposal: 0.015
+    latex: \Omega_\mathrm{m}
+    drop: true
+  mnu:
+    prior:
+      min: 0.06
+      max: 0.6
+    ref:
+      dist: norm
+      loc: 0.25
+      scale: 0.1
+    proposal: 0.05
+  w0pwa:
+    prior:
+      min: -4.5 
+      max: -0.01
+    ref:
+      dist: norm
+      loc: -0.99
+      scale: 0.05
+    proposal: 0.05
+    latex: w_{0,\mathrm{DE}}+w_{a,\mathrm{DE}}
+    drop: true
+  w:
+    prior:
+      min: -2
+      max: -0.01
+    ref:
+      dist: norm
+      loc: -0.99
+      scale: 0.05
+    proposal: 0.05
+    latex: w_{0,\mathrm{DE}}
+  tau:
+    value: 0.0697186
+    latex: \tau_\mathrm{reio}
+  # ---------------------------------------------------------------------------------------
+  # ------------------------------------- DERIVED PARAMETERS ------------------------------
+  # ---------------------------------------------------------------------------------------
+  # WARNING: DO NOT REMOVE omegabh2/omegach2/omegamh2/wa/As/ FROM DERIVED PARAMETERS
+  # SEE: github.com/CosmoLike/cocoa#warning-warning-warning-weak-lensing-yaml-files-in-cobaya-
+  # --------------------------------------------------------------------------------------- 
+  As:
+    value: 'lambda As_1e9: 1e-9 * As_1e9'
+    latex: A_\mathrm{s}
+  wa:
+    value: 'lambda w0pwa, w: w0pwa - w'
+    latex: w_{a,\mathrm{DE}}
+  omegabh2:
+    value: 'lambda omegab, H0: omegab*(H0/100)**2'
+    latex: \Omega_\mathrm{b} h^2
+  omegach2:
+    value: 'lambda omegam, omegab, mnu, H0: (omegam-omegab)*(H0/100)**2-(mnu*(3.046/3)**0.75)/94.0708'
+    latex: \Omega_\mathrm{c} h^2
+  omegal:
+    latex: \Omega_\Lambda
+  omegamh2:
+    derived: 'lambda omegam, H0: omegam*(H0/100)**2'
+    latex: \Omega_\mathrm{m} h^2
+  sigma8:
+    latex: \sigma_8
+  s8h5:
+    derived: 'lambda sigma8, H0: sigma8*(H0*1e-2)**(-0.5)'
+    latex: \sigma_8/h^{0.5}
+  s8omegamp5:
+    derived: 'lambda sigma8, omegam: sigma8*omegam**0.5'
+    latex: \sigma_8 \Omega_\mathrm{m}^{0.5}
+  s8omegamp25:
+    derived: 'lambda sigma8, omegam: sigma8*omegam**0.25'
+    latex: \sigma_8 \Omega_\mathrm{m}^{0.25}
+  age:
+    latex: '{\rm{Age}}/\mathrm{Gyr}'
+  rdrag:
+    latex: r_\mathrm{drag}
+  yheused:
+    latex: Y_P^\mathrm{BBN}
+  omegan2:
+    latex: \Omega_\mathrm{\\nu} h^2
+  omegan:
+    derived: 'lambda omegan2, H0: omegan2/((H0/100)**2)'
+    latex: \Omega_\mathrm{\\nu}
+  # ------------------------------------------------------------------------
+  # ------------------------------------------------------------------------
+  # Nuisance parameters below (it overwrites the default settings)
+  # Default settings in likelihood/roman_real_params_lens.yaml
+  # Default settings in likelihood/roman_real_params_source.yaml
+  # ------------------------------------------------------------------------
+  # ------------------------------------------------------------------------
+  roman_DZ_S1:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.001
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.001
+    proposal: 0.001
+    latex: \Delta z_\mathrm{s,roman}^1
+  roman_DZ_S2:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.001
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.001
+    proposal: 0.001
+    latex: \Delta z_\mathrm{s,roman}^2
+  roman_DZ_S3:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.001
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.001
+    proposal: 0.001
+    latex: \Delta z_\mathrm{s,roman}^3
+  roman_DZ_S4:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.001
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.001
+    proposal: 0.001
+    latex: \Delta z_\mathrm{s,roman}^4
+  roman_DZ_S5:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.001
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.001
+    proposal: 0.001
+    latex: \Delta z_\mathrm{s,roman}^5
+  roman_DZ_S6:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.001
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.001
+    proposal: 0.001
+    latex: \Delta z_\mathrm{s,roman}^6
+  roman_DZ_S7:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.001
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.001
+    proposal: 0.001
+    latex: \Delta z_\mathrm{s,roman}^7
+  roman_DZ_S8:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.001
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.001
+    proposal: 0.001
+    latex: \Delta z_\mathrm{s,roman}^8
+  # ------------------------------------------------------------------------
+  # ------------------------------------------------------------------------
+  roman_M1:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    proposal: 0.003
+    latex: m_\mathrm{roman}^1
+  roman_M2:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    proposal: 0.003
+    latex: m_\mathrm{roman}^2
+  roman_M3:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    proposal: 0.003
+    latex: m_\mathrm{roman}^3
+  roman_M4:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    proposal: 0.003
+    latex: m_\mathrm{roman}^4
+  roman_M5:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    proposal: 0.003
+    latex: m_\mathrm{roman}^5
+  roman_M6:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    proposal: 0.003
+    latex: m_\mathrm{roman}^6
+  roman_M7:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    proposal: 0.003
+    latex: m_\mathrm{roman}^7
+  roman_M8:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    proposal: 0.003
+    latex: m_\mathrm{roman}^8
+  # ------------------------------------------------------------------------
+  # ------------------------------------------------------------------------
+  # Intrinsic alignment
+  roman_A1_1:
+    prior:
+      min: -5
+      max:  5
+    ref:
+      dist: norm
+      loc: 0.5
+      scale: 0.5
+    proposal: 0.5
+    latex: A_\mathrm{1-IA,roman}^1
+  roman_A1_2:
+    prior:
+      min: -5
+      max:  5
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.5
+    proposal: 0.5
+    latex: A_\mathrm{1-IA,roman}^2
+  roman_A2_1:
+    value: 0.0
+    latex: A_\mathrm{2-IA,roman}^1
+  roman_A2_2:
+    value: 0.0
+    latex: A_\mathrm{2-IA,roman}^2
+  roman_BTA_1:
+    value: 0.0
+    latex: A_\mathrm{BTA-IA,roman}^1
+  # ------------------------------------------------------------------------
+  # ------------------------------------------------------------------------
+  roman_DZ_L1:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    proposal: 0.003
+    latex: \Delta z_\mathrm{l,roman}^1
+  roman_DZ_L2:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    proposal: 0.003
+    latex: \Delta z_\mathrm{l,roman}^2
+  roman_DZ_L3:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    proposal: 0.003
+    latex: \Delta z_\mathrm{l,roman}^3
+  roman_DZ_L4:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    proposal: 0.003
+    latex: \Delta z_\mathrm{l,roman}^4
+  roman_DZ_L5:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    proposal: 0.003
+    latex: \Delta z_\mathrm{l,roman}^5
+  roman_DZ_L6:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    proposal: 0.003
+    latex: \Delta z_\mathrm{l,roman}^6
+  roman_DZ_L7:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    proposal: 0.003
+    latex: \Delta z_\mathrm{l,roman}^7
+  roman_DZ_L8:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    proposal: 0.003
+    latex: \Delta z_\mathrm{l,roman}^8
+  roman_DZ_L9:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    proposal: 0.003
+    latex: \Delta z_\mathrm{l,roman}^9
+  roman_DZ_L10:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.003
+    proposal: 0.003
+    latex: \Delta z_\mathrm{l,roman}^{10}
+  # ------------------------------------------------------------------------
+  # ------------------------------------------------------------------------
+  # Bin bias parameters
+  roman_B1_1:
+    prior:
+      min: 0.8
+      max: 2
+    ref:
+      dist: norm
+      loc: 1.09
+      scale: 0.1
+    proposal: 0.1
+    latex: b_\mathrm{1-roman}^1
+  roman_B1_2:
+    prior:
+      min: 0.8
+      max: 2
+    ref:
+      dist: norm
+      loc: 1.15
+      scale: 0.1
+    proposal: 0.1
+    latex: b_\mathrm{1-roman}^2
+  roman_B1_3:
+    prior:
+      min: 0.8
+      max: 2
+    ref:
+      dist: norm
+      loc: 1.21
+      scale: 0.1
+    proposal: 0.1
+    latex: b_\mathrm{1-roman}^3
+  roman_B1_4:
+    prior:
+      min: 0.8
+      max: 2
+    ref:
+      dist: norm
+      loc: 1.27
+      scale: 0.1
+    proposal: 0.1
+    latex: b_\mathrm{1-roman}^4
+  roman_B1_5:
+    prior:
+      min: 0.8
+      max: 2
+    ref:
+      dist: norm
+      loc: 1.33
+      scale: 0.1
+    proposal: 0.1
+    latex: b_\mathrm{1-roman}^5
+  roman_B1_6:
+    prior:
+      min: 0.8
+      max: 2
+    ref:
+      dist: norm
+      loc: 1.40
+      scale: 0.1
+    proposal: 0.1
+    latex: b_\mathrm{1-roman}^6
+  roman_B1_7:
+    prior:
+      min: 0.8
+      max: 2
+    ref:
+      dist: norm
+      loc: 1.46
+      scale: 0.1
+    proposal: 0.1
+    latex: b_\mathrm{1-roman}^7
+  roman_B1_8:
+    prior:
+      min: 0.8
+      max: 2
+    ref:
+      dist: norm
+      loc: 1.53
+      scale: 0.1
+    proposal: 0.1
+    latex: b_\mathrm{1-roman}^8
+  roman_B1_9:
+    prior:
+      min: 0.8
+      max: 2
+    ref:
+      dist: norm
+      loc: 1.60
+      scale: 0.1
+    proposal: 0.1
+    latex: b_\mathrm{1-roman}^9
+  roman_B1_10:
+    prior:
+      min: 0.8
+      max: 2
+    ref:
+      dist: norm
+      loc: 1.67
+      scale: 0.1
+    proposal: 0.1
+    latex: b_\mathrm{1-roman}^{10}
+  # ------------------------------------------------------------------------
+  # ------------------------------------------------------------------------
+  # Point Mass parameters
+  roman_PM1:
+    value: 0.0
+    latex: PM_\mathrm{roman}^1
+  roman_PM2:
+    value: 0.0
+    latex: PM_\mathrm{roman}^2
+  roman_PM3:
+    value: 0.0
+    latex: PM_\mathrm{roman}^3
+  roman_PM4:
+    value: 0.0
+    latex: PM_\mathrm{roman}^4
+  roman_PM5:
+    value: 0.0
+    latex: PM_\mathrm{roman}^5
+  roman_PM6:
+    value: 0.0
+    latex: PM_\mathrm{roman}^6
+  roman_PM7:
+    value: 0.0
+    latex: PM_\mathrm{roman}^7
+  roman_PM8:
+    value: 0.0
+    latex: PM_\mathrm{roman}^8
+  roman_PM9:
+    value: 0.0
+    latex: PM_\mathrm{roman}^9
+  roman_PM10:
+    value: 0.0
+    latex: PM_\mathrm{roman}^{10}
+
+  roman_BMAG_1:
+    value: 0.0
+    latex: b_\mathrm{BMAG-roman}^1
+  roman_BMAG_2:
+    value: 0.0
+    latex: b_\mathrm{BMAG-roman}^2
+  roman_BMAG_3:
+    value: 0.0
+    latex: b_\mathrm{BMAG-roman}^3
+  roman_BMAG_4:
+    value: 0.0
+    latex: b_\mathrm{BMAG-roman}^4
+  roman_BMAG_5:
+    value: 0.0
+    latex: b_\mathrm{BMAG-roman}^5
+  roman_BMAG_6:
+    value: 0.0
+    latex: b_\mathrm{BMAG-roman}^6
+  roman_BMAG_7:
+    value: 0.0
+    latex: b_\mathrm{BMAG-roman}^7
+  roman_BMAG_8:
+    value: 0.0
+    latex: b_\mathrm{BMAG-roman}^8
+  roman_BMAG_9:
+    value: 0.0
+    latex: b_\mathrm{BMAG-roman}^9
+  roman_BMAG_10:
+    value: 0.0
+    latex: b_\mathrm{BMAG-roman}^{10}
+       
+theory:
+  camb:
+    path: ./external_modules/code/CAMB
+    stop_at_error: False
+    use_renames: True
+    extra_args:
+      halofit_version: takahashi
+      AccuracyBoost: 1.0
+      dark_energy_model: ppf
+      accurate_massive_neutrino_transfers: false
+      k_per_logint: 15
+      kmax: 15
+
+sampler:
+  evaluate:
+    N: 1
+    override:
+      As_1e9: 2.1
+      ns: 0.96605
+      H0: 67.32
+      omegab: 0.0495
+      omegam: 0.316
+      mnu: 0.06
+
+      roman_DZ_S1: 0.0
+      roman_DZ_S2: 0.0
+      roman_DZ_S3: 0.0
+      roman_DZ_S4: 0.0
+      roman_DZ_S5: 0.0
+      roman_DZ_S6: 0.0
+      roman_DZ_S7: 0.0
+      roman_DZ_S8: 0.0
+
+      roman_DZ_L1: 0.0
+      roman_DZ_L2: 0.0
+      roman_DZ_L3: 0.0
+      roman_DZ_L4: 0.0
+      roman_DZ_L5: 0.0
+      roman_DZ_L6: 0.0
+      roman_DZ_L7: 0.0
+      roman_DZ_L8: 0.0
+      roman_DZ_L9: 0.0
+      roman_DZ_L10: 0.0
+
+      roman_M1: 0.0
+      roman_M2: 0.0
+      roman_M3: 0.0
+      roman_M4: 0.0
+      roman_M5: 0.0
+      roman_M6: 0.0
+      roman_M7: 0.0
+      roman_M8: 0.0
+
+      roman_A1_1: 0.0
+      roman_A1_2: 0.0
+
+      roman_B1_1: 1.09
+      roman_B1_2: 1.15
+      roman_B1_3: 1.21
+      roman_B1_4: 1.27
+      roman_B1_5: 1.33
+      roman_B1_6: 1.40
+      roman_B1_7: 1.46
+      roman_B1_8: 1.53
+      roman_B1_9: 1.60
+      roman_B1_10: 1.67
+
+      w0pwa: -1.0
+      w: -1.0
+
+output: ./projects/roman_fourier/chains/roman_setup0_evaluate/

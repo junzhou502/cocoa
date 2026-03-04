@@ -1,0 +1,315 @@
+  # implementing lens = source
+  roman_DZ_L1:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.002
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.002
+    proposal: 0.002
+    latex: \Delta z_\mathrm{l,roman}^1
+  roman_DZ_L2:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.002
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.002
+    proposal: 0.002
+    latex: \Delta z_\mathrm{l,roman}^2
+  roman_DZ_L3:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.002
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.002
+    proposal: 0.002
+    latex: \Delta z_\mathrm{l,roman}^3
+  roman_DZ_L4:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.002
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.002
+    proposal: 0.002
+    latex: \Delta z_\mathrm{l,roman}^4
+  roman_DZ_L5:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.002
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.002
+    proposal: 0.002
+    latex: \Delta z_\mathrm{l,roman}^5
+  roman_DZ_L6:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.002
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.002
+    proposal: 0.002
+    latex: \Delta z_\mathrm{l,roman}^6
+  roman_DZ_L7:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.002
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.002
+    proposal: 0.002
+    latex: \Delta z_\mathrm{l,roman}^7
+  roman_DZ_L8:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.002
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.002
+    proposal: 0.002
+    latex: \Delta z_\mathrm{l,roman}^8
+  roman_DZ_L9:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.002
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.002
+    proposal: 0.002
+    latex: \Delta z_\mathrm{l,roman}^9
+  roman_DZ_L10:
+    prior:
+      dist: norm
+      loc: 0.0
+      scale: 0.002
+    ref:
+      dist: norm
+      loc: 0.0
+      scale: 0.002
+    proposal: 0.002
+    latex: \Delta z_\mathrm{l,roman}^{10}
+  # ------------------------------------------------------------------------
+  # ------------------------------------------------------------------------
+  # ------------------------------------------------------------------------
+  # Bin bias parameters
+  roman_B1_1:
+    prior:
+      min: 0.4
+      max: 4
+    ref:
+      dist: norm
+      loc: 1.24
+      scale: 0.15
+    proposal: 0.1
+    latex: b_\mathrm{1-Roman}^1
+  roman_B1_2:
+    prior:
+      min: 0.4
+      max: 4
+    ref:
+      dist: norm
+      loc: 1.36
+      scale: 0.15
+    proposal: 0.1
+    latex: b_\mathrm{1-Roman}^2
+  roman_B1_3:
+    prior:
+      min: 0.4
+      max: 4
+    ref:
+      dist: norm
+      loc: 1.47
+      scale: 0.15
+    proposal: 0.1
+    latex: b_\mathrm{1-Roman}^3
+  roman_B1_4:
+    prior:
+      min: 0.4
+      max: 4
+    ref:
+      dist: norm
+      loc: 1.60
+      scale: 0.15
+    proposal: 0.1
+    latex: b_\mathrm{1-Roman}^4
+  roman_B1_5:
+    prior:
+      min: 0.4
+      max: 4
+    ref:
+      dist: norm
+      loc: 1.76
+      scale: 0.1
+    proposal: 0.1
+    latex: b_\mathrm{1-Roman}^5
+  roman_B1_6:
+    prior:
+      min: 0.4
+      max: 4
+    ref:
+      dist: norm
+      loc: 1.47
+      scale: 0.15
+    proposal: 0.1
+    latex: b_\mathrm{1-Roman}^6
+  roman_B1_7:
+    prior:
+      min: 0.4
+      max: 4
+    ref:
+      dist: norm
+      loc: 1.60
+      scale: 0.15
+    proposal: 0.1
+    latex: b_\mathrm{1-Roman}^7
+  roman_B1_8:
+    prior:
+      min: 0.4
+      max: 4
+    ref:
+      dist: norm
+      loc: 1.76
+      scale: 0.1
+    proposal: 0.1
+    latex: b_\mathrm{1-Roman}^8
+  roman_B1_9:
+    prior:
+      min: 0.4
+      max: 4
+    ref:
+      dist: norm
+      loc: 1.60
+      scale: 0.15
+    proposal: 0.1
+    latex: b_\mathrm{1-Roman}^9
+  roman_B1_10:
+    prior:
+      min: 0.4
+      max: 4
+    ref:
+      dist: norm
+      loc: 1.76
+      scale: 0.1
+    proposal: 0.1
+    latex: b_\mathrm{1-Roman}^{10}
+  # ------------------------------------------------------------------------
+  # ------------------------------------------------------------------------
+  # ------------------------------------------------------------------------
+  roman_B2_1:
+    value: 0.0
+    latex: b_\mathrm{2-Roman}^1
+  roman_B2_2:
+    value: 0.0
+    latex: b_\mathrm{2-Roman}^2
+  roman_B2_3:
+    value: 0.0
+    latex: b_\mathrm{2-Roman}^3
+  roman_B2_4:
+    value: 0.0
+    latex: b_\mathrm{2-Roman}^4
+  roman_B2_5:
+    value: 0.0
+    latex: b_\mathrm{2-Roman}^5
+  roman_B2_6:
+    value: 0.0
+    latex: b_\mathrm{2-Roman}^6
+  roman_B2_7:
+    value: 0.0
+    latex: b_\mathrm{2-Roman}^7
+  roman_B2_8:
+    value: 0.0
+    latex: b_\mathrm{2-Roman}^8
+  roman_B2_9:
+    value: 0.0
+    latex: b_\mathrm{2-Roman}^9
+  roman_B2_10:
+    value: 0.0
+    latex: b_\mathrm{2-Roman}^{10}
+  # ------------------------------------------------------------------------
+  # ------------------------------------------------------------------------
+  # ------------------------------------------------------------------------
+  roman_BMAG_1:
+    value: 0.0
+    latex: b_\mathrm{BMAG-Roman}^1
+  roman_BMAG_2:
+    value: 0.0
+    latex: b_\mathrm{BMAG-Roman}^2
+  roman_BMAG_3:
+    value: 0.0
+    latex: b_\mathrm{BMAG-Roman}^3
+  roman_BMAG_4:
+    value: 0.0
+    latex: b_\mathrm{BMAG-Roman}^4
+  roman_BMAG_5:
+    value: 0.0
+    latex: b_\mathrm{BMAG-Roman}^5
+  roman_BMAG_6:
+    value: 0.0
+    latex: b_\mathrm{BMAG-Roman}^6
+  roman_BMAG_7:
+    value: 0.0
+    latex: b_\mathrm{BMAG-Roman}^7
+  roman_BMAG_8:
+    value: 0.0
+    latex: b_\mathrm{BMAG-Roman}^8
+  roman_BMAG_9:
+    value: 0.0
+    latex: b_\mathrm{BMAG-Roman}^9
+  roman_BMAG_10:
+    value: 0.0
+    latex: b_\mathrm{BMAG-Roman}^{10}
+  # ------------------------------------------------------------------------
+  # ------------------------------------------------------------------------
+  # ------------------------------------------------------------------------
+  # Point Mass parameters
+  roman_PM1:
+    value: 0.0
+    latex: PM_\mathrm{Roman}^1
+  roman_PM2:
+    value: 0.0
+    latex: PM_\mathrm{Roman}^2
+  roman_PM3:
+    value: 0.0
+    latex: PM_\mathrm{Roman}^3
+  roman_PM4:
+    value: 0.0
+    latex: PM_\mathrm{Roman}^4
+  roman_PM5:
+    value: 0.0
+    latex: PM_\mathrm{Roman}^5
+  roman_PM6:
+    value: 0.0
+    latex: PM_\mathrm{Roman}^6
+  roman_PM7:
+    value: 0.0
+    latex: PM_\mathrm{Roman}^7
+  roman_PM8:
+    value: 0.0
+    latex: PM_\mathrm{Roman}^8
+  roman_PM9:
+    value: 0.0
+    latex: PM_\mathrm{Roman}^9
+  roman_PM10:
+    value: 0.0
+    latex: PM_\mathrm{Roman}^{10}
