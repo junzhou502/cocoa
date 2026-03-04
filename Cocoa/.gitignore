@@ -7,7 +7,6 @@ cobaya4/
 .ipynb_checkpoints/
 ./cobaya
 cobaya/
-chains/
 share/
 include/
 .local/
