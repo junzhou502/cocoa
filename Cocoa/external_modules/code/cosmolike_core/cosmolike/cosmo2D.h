@@ -132,6 +132,8 @@ void C_cl_tomo(int L, int ni, int nj, double *Cl, double dev, double tolerance);
 
 double get_radial_kernel_single(double a, int ni);
 
+double get_lensing_efficiency_single(double a, int ni);
+
 #ifdef __cplusplus
 }
 #endif

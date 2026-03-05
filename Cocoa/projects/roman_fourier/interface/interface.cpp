@@ -338,6 +338,15 @@ PYBIND11_MODULE(cosmolike_roman_fourier_interface, m)
     "get radial kernel for every len sample",
     py::arg("chis").none(false)
     );
+  m.def("get_lensing_efficiency",
+    [](arma::Col<double> chis){
+      using namespace cosmolike_interface;
+      arma::Mat<double> res=get_lensing_efficiency(chis);
+      return res;
+    },
+    "get lensing efficiency for every source sample",
+    py::arg("chis").none(false)
+    );
   // --------------------------------------------------------------------
   // Theoretical Cosmolike Functions
   // --------------------------------------------------------------------

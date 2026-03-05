@@ -420,7 +420,13 @@ class _cosmolike_prototype_base(DataSetLikelihood):
       radi = ci.get_radial_kernel(chi)
       np.savetxt(self.output_folder+'chi_of_radial_kernel.txt',chi)
       np.savetxt(self.output_folder+'radial_kernel.txt', radi)
-      
+      #-------------------------------------------------------------
+      #---------------output for lensing kernel----------------------
+      #-------------------------------------------------------------
+      chi = np.loadtxt('./projects/roman_fourier/data/chis-4-lensing-efficiency.txt')[1:]
+      eff = ci.get_lensing_efficiency(chi)
+      np.savetxt(self.output_folder+'chi_of_lensing_efficiency.txt', chi)
+      np.savetxt(self.output_folder+'lensing_efficiency.txt', eff)
       #-------------------------------------------------------
       #---output linear and nonlinear matter power spectrum---
       #-------------------------------------------------------

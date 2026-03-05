@@ -2792,3 +2792,15 @@ double get_radial_kernel_single(double a, int ni)
   const double WK1 = W_gal(a, ni, hoverh0);
   return WK1; 
 }
+
+double get_lensing_efficiency_single(double a, int ni)
+{
+  if (!(a>=0) || !(a<=1)) {
+      log_fatal("a>0 and a<1 not true");
+      exit(1);
+    }
+  struct chis chidchi = chi_all(a);
+  const double fK = f_K(chidchi.chi);
+  const double WK1 = W_kappa(a, fK, ni);
+  return WK1;
+}
