@@ -515,8 +515,14 @@ class _cosmolike_prototype_base(DataSetLikelihood):
       fmt = '%d', '%1.8e'
       np.savetxt(self.print_datavector_file, out, fmt = fmt)
       #-------------------------------------------------------
+      #-------------------output for chi(z)-------------------
+      #-------------------------------------------------------
       h = self.provider.get_param("H0")/100.0
-      
+      chi=self.provider.get_comoving_radial_distance(self.z_interp_1D)*h
+      np.savetxt(self.output_folder+'z_chi.txt', self.z_interp_1D)
+      np.savetxt(self.output_folder+'chi_z.txt', chi)
+      #-------------------------------------------------------
+      #-------------------------------------------------------
       
       
       

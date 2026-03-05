@@ -36,12 +36,26 @@ class _cosmolike_prototype_base(DataSetLikelihood):
     self.l_max = ini.float("l_max")
     self.l_max_shear = ini.float("l_max_shear")
     
-    # ------------------------------------------------------------------------   
+    # ------------------------------------------------------------------------ 
+    # ---------------------------origin grids---------------------------------
+    # ------------------------------------------------------------------------  
     tmp=int(1000 + 250*self.accuracyboost)
     self.z_interp_1D = np.concatenate((np.linspace(0.0,3.0,max(100,int(0.80*tmp))),
                                        np.linspace(3.0,50.1,max(100,int(0.40*tmp))),
                                        np.linspace(1070,1100,max(50,int(0.10*tmp)))),axis=0)
     self.len_z_interp_1D = len(self.z_interp_1D)
+
+    #-------------------------------------------------------------------------
+    #----------------temporary change the redshift used-----------------------
+    #-----------------by comving radial distance for -------------------------
+    #--------------------easier comaprison -----------------------------------
+    #temp = np.concatenate((np.exp(np.linspace(np.log(1e-4), np.log(0.1), 250)), np.linspace(0.1,1,250)))
+    #temp = (1/temp-1)[::-1]
+    #temp = temp[temp<1100]
+    #self.z_interp_1D = temp
+    #self.len_z_interp_1D = len(self.z_interp_1D)
+    #-------------------------------------------------------------------------
+    #-------------------------------------------------------------------------
 
     tmp=int(min(120 + 20*self.accuracyboost,250))
     self.z_interp_2D = np.concatenate((np.linspace(0,3.0,max(50,int(0.75*tmp))), 
@@ -51,7 +65,7 @@ class _cosmolike_prototype_base(DataSetLikelihood):
     self.log10k_interp_2D = np.linspace(-4.99,2.0,int(1250+250*self.accuracyboost))
     self.len_log10k_interp_2D = len(self.log10k_interp_2D)
     # ------------------------------------------------------------------------
-
+    # ------------------------------------------------------------------------
     ci.initial_setup(
       self.adopt_limber_gg,
       self.adopt_RSD_gg,
@@ -393,7 +407,14 @@ class _cosmolike_prototype_base(DataSetLikelihood):
       fmt = '%d', '%1.8e'
       np.savetxt(self.print_datavector_file, out, fmt = fmt)
       #-------------------------------------------------------
+      #-------------------output for chi(z)-------------------
+      #-------------------------------------------------------
       h = self.provider.get_param("H0")/100.0
+      chi=self.provider.get_comoving_radial_distance(self.z_interp_1D)*h
+      np.savetxt(self.output_folder+'z_chi.txt', self.z_interp_1D)
+      np.savetxt(self.output_folder+'chi_z.txt', chi)
+      #-------------------------------------------------------
+      #-------------------------------------------------------
       
       
       
