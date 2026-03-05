@@ -1785,6 +1785,20 @@ double get_baryon_power_spectrum_ratio(const double log10k, const double a)
   return PkRatio_baryons(KNL, a);
 }
 
+arma::Mat<double> get_radial_kernel(const arma::Col<double>& chis)
+{
+  const int nzbins = redshift.clustering_nbin;
+  const int nchis = chis.n_elem;
+  arma::Mat<double> eff(nzbins, nchis, arma::fill::zeros);
+  for(int i=0;i<nchis;i++)
+  {
+    double a = a_chi(chis[i]/cosmology.coverH0*cosmology.h0);
+    for(int ni=0;ni<nzbins;ni++)
+      //this is dimensionless, we want to transfer it into 1/Mpc
+      eff(ni,i) = get_radial_kernel_single(a, ni)/cosmology.coverH0*cosmology.h0;
+  }
+  return eff;
+}
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------

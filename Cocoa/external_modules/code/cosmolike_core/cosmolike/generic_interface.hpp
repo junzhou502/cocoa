@@ -1316,5 +1316,7 @@ void IP::set_mask(std::string mask_filename, arma::Col<int>::fixed<M> ord)
   this->is_mask_set_ = true;
 }
 
+arma::Mat<double> get_radial_kernel(const arma::Col<double>& chis);
+
 }  // namespace cosmolike_interface
 #endif // HEADER GUARD

@@ -329,7 +329,15 @@ PYBIND11_MODULE(cosmolike_roman_fourier_interface, m)
       py::arg("allsims").none(false),
       py::return_value_policy::move
     );
-
+  m.def("get_radial_kernel",
+    [](arma::Col<double> chis){
+      using namespace cosmolike_interface;
+      arma::Mat<double> res=get_radial_kernel(chis);
+      return res;
+    },
+    "get radial kernel for every len sample",
+    py::arg("chis").none(false)
+    );
   // --------------------------------------------------------------------
   // Theoretical Cosmolike Functions
   // --------------------------------------------------------------------

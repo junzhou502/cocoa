@@ -2779,3 +2779,16 @@ void C_cl_tomo(
   free(f1_chi);
   free(ell_ar);
 }
+
+
+double get_radial_kernel_single(double a, int ni)
+{
+  if (!(a>0) || !(a<=1)) {
+      log_fatal("a>0 and a<1 not true");
+      exit(1);
+    }
+  struct chis chidchi = chi_all(a);
+  const double hoverh0 = hoverh0v2(a, chidchi.dchida);
+  const double WK1 = W_gal(a, ni, hoverh0);
+  return WK1; 
+}

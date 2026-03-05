@@ -413,11 +413,13 @@ class _cosmolike_prototype_base(DataSetLikelihood):
       chi=self.provider.get_comoving_radial_distance(self.z_interp_1D)*h
       np.savetxt(self.output_folder+'z_chi.txt', self.z_interp_1D)
       np.savetxt(self.output_folder+'chi_z.txt', chi)
-      #-------------------------------------------------------
-      #-------------------------------------------------------
-      
-      
-      
+      #-------------------------------------------------------------
+      #---------------output for radial kernel----------------------
+      #-------------------------------------------------------------
+      chi = np.load('./projects/roman_fourier/data/chis_4_radial_kernel.npy')
+      radi = ci.get_radial_kernel(chi)
+      np.savetxt(self.output_folder+'chi_of_radial_kernel.txt',chi)
+      np.savetxt(self.output_folder+'radial_kernel.txt', radi)
       
       #-------------------------------------------------------
       #---output linear and nonlinear matter power spectrum---
