@@ -290,6 +290,86 @@ bin_avg set_bin_average(const int i_theta, const int j_L)
   return r;
 }
 
+double** get_Pl_cache(const int i_legendre)
+{
+  static double*** P  = NULL;
+  static int ntheta = 0;
+  static double cache[MAX_SIZE_ARRAYS];
+  static double* thetas = NULL;
+
+  if (Ntable.Ntheta == 0) {
+    log_fatal("Ntable.Ntheta not initialized");
+    exit(1);
+  }
+  if (P == NULL || (ntheta != Ntable.Ntheta) || NULL == thetas || fdiff(cache[0], Ntable.random))
+  {
+    if (thetas != NULL) {
+      free(thetas);
+    }
+    thetas = (double*) malloc1d(Ntable.Ntheta);
+
+    if (P != NULL) {
+      free(P);
+    }
+
+    // Legendre computes l=0,...,lmax (inclusive)
+    P  = (double***) malloc3d(4, Ntable.Ntheta, Ntable.LMAX);
+    double** Pl0  = P[0]; double** Pl2  = P[1];
+    double** Gl0 = P[2]; double** Gl1 = P[3];
+
+    // initialize the theta bin
+    const double logvtmin = log(Ntable.vtmin);
+    const double logvtmax = log(Ntable.vtmax);
+    const double logdt = (logvtmax - logvtmin)/Ntable.Ntheta;
+    const double fac = (2./3.);
+
+    #pragma omp parallel for
+    for (int i=0; i<Ntable.Ntheta; i++) {
+      const double thetamin = exp(logvtmin + (i + 0.)*logdt);
+      const double thetamax = exp(logvtmin + (i + 1.)*logdt);
+      thetas[i] = fac * (pow(thetamax,3) - pow(thetamin,3)) /
+                     (thetamax*thetamax    - thetamin*thetamin);
+      double x = cos(thetas[i]);
+      double sinx2 = sin(thetas[i])*sin(thetas[i]);
+
+      //fill Pl0
+      gsl_sf_legendre_Pl_array(Ntable.LMAX-1, x, Pl0[i]);
+
+      //fill Pl2
+      Pl2[i][0] = 0.0;
+      Pl2[i][1] = 0.0;
+      gsl_sf_legendre_Plm_array(Ntable.LMAX-1, 2, x, &(Pl2[i][2]));
+
+      //fill Gl0
+      Gl0[i][0] = 0.0;
+      Gl1[i][0] = 0.0;
+      for (int l=1; l<Ntable.LMAX; l++) {
+        //calculate the Glm
+        double term1 = -((l-2.*2.)/sinx2+0.5*l*(l-1))*Pl2[i][l];
+        double term2 = (l+2.)*x/sinx2*Pl2[i][l-1];
+        Gl0[i][l] = term1 + term2;
+        Gl0[i][l] *= (2.*l+1)/(2.*M_PI*l*l*(l+1.)*(l+1.));
+
+        term1 = (l-1.)*x/sinx2*Pl2[i][l];
+        term2 = -(l+2.)/sinx2*Pl2[i][l-1];
+
+        Gl1[i][l] = 2*(term1 + term2);
+        Gl1[i][l] *= (2.*l+1)/(2.*M_PI*l*l*(l+1.)*(l+1.));
+      }
+
+    }
+
+    ntheta = Ntable.Ntheta;
+    cache[0] = Ntable.random;
+  }
+
+  if (i_legendre < 0 || i_legendre > 3) {
+  log_fatal("bad i_legendre index = %d", i_legendre);
+  exit(1);
+  }
+  return P[i_legendre];
+}
+
 double interpol1d(
   const double* const f, 
   const int n, 

@@ -46,6 +46,8 @@ double fmax(const double a, const double b);
 
 bin_avg set_bin_average(const int i_theta, const int j_L);
 
+double** get_Pl_cache(const int i_legendre);
+
 double interpol1d(
   const double* const f, 
   const int n, 
