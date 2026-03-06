@@ -19,7 +19,6 @@ use_emulator: False
 
 # options for comparisons
 adopt_limber_gg: 0
-adopt_limber_gs: 0
 adopt_RSD_gg: 1
 adopt_RSD_gs: 1
 NCell_interpolation: 300 #base:300

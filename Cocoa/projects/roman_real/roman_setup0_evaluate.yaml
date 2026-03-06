@@ -707,7 +707,7 @@ sampler:
       roman_M7: 0.0
       roman_M8: 0.0
 
-      roman_A1_1: 0.5
+      roman_A1_1: 0.0
       roman_A1_2: 0.0
 
       roman_B1_1: 1.09

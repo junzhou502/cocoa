@@ -59,7 +59,6 @@ class _cosmolike_prototype_base(DataSetLikelihood):
       self.Na_interpolation,)
     
     self.log.info(' adopt_limber_gg = %d ', self.adopt_limber_gg)
-    self.log.info(' adopt_limber_gs = %d ', self.adopt_limber_gs)
     self.log.info(' adopt_RSD_gg = %d ', self.adopt_RSD_gg)
     self.log.info(' adopt_RSD_gs = %d ', self.adopt_RSD_gs)
     self.log.info(' NCell_interpolation = %d ', self.NCell_interpolation)

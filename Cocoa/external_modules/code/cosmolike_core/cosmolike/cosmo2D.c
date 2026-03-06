@@ -1070,7 +1070,6 @@ double w_gk_tomo(const int nt, const int ni, const int limber)
   }
   return w_vec[q];
 }
-
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
@@ -3097,7 +3096,8 @@ void C_cl_tomo(
     cfftlog_ells(f1_chi[3], f1_chi[0], Ntable.NL_Nchi, &cfg, ell_ar, 
                  Ntable.NL_Nell_block, Fk1[2], Fk1[0]);
     
-    cfftlog_ells_increment(f1_chi[3], f1_chi[1], Ntable.NL_Nchi, &cfg_RSD, 
+    if(like.adopt_RSD_gg == 1)
+      cfftlog_ells_increment(f1_chi[3], f1_chi[1], Ntable.NL_Nchi, &cfg_RSD, 
                            ell_ar, Ntable.NL_Nell_block, Fk1[2], Fk1[0]);   
     
     cfftlog_ells(f1_chi[3], f1_chi[2], Ntable.NL_Nchi, &cfg_Mag, ell_ar, 
