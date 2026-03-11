@@ -23,3 +23,12 @@ EXAMPLE_EVALUATE1.yaml
 EXAMPLE_EVALUATE2.yaml
 
 runyaml.ipynb
+
+chains/roman_setup3_multievaluate
+chains/roman_setup1_multievaluate
+sbatch
+
+check_chi2.ipynb
+ccl_compare_plot.ipynb
+ccl_compare.ipynb
+ccl_compare.py

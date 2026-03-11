@@ -34,6 +34,7 @@ class _cosmolike_prototype_base(DataSetLikelihood):
     self.ntheta = ini.int("n_theta")
     self.theta_min_arcmin = ini.float("theta_min_arcmin")
     self.theta_max_arcmin = ini.float("theta_max_arcmin")
+    self.evaluation_counter = 1
     
     # ------------------------------------------------------------------------   
     tmp=int(1000 + 250*self.accuracyboost)
@@ -361,7 +362,11 @@ class _cosmolike_prototype_base(DataSetLikelihood):
   # ------------------------------------------------------------------------
   
   def logp(self, **params):
-    return self.compute_logp(self.get_datavector(**params))
+    dv = self.get_datavector(**params)
+    if self.compute_log_posterior:
+      return self.compute_logp(dv)
+    else:
+      return 0
 
   # ------------------------------------------------------------------------
   # ------------------------------------------------------------------------
@@ -507,27 +512,18 @@ class _cosmolike_prototype_base(DataSetLikelihood):
       datavector = ci.compute_data_vector_masked()
 
     if self.print_datavector:
+      
       size = len(datavector)
       out = np.zeros(shape=(size, 2))
       out[:,0] = np.arange(0, size)
       out[:,1] = datavector
       fmt = '%d', '%1.8e'
-      np.savetxt(self.print_datavector_file, out, fmt = fmt)
-      #-------------------------------------------------------
-      #-------------------output for chi(z)-------------------
-      #-------------------------------------------------------
-      h = self.provider.get_param("H0")/100.0
-      chi=self.provider.get_comoving_radial_distance(self.z_interp_1D)*h
-      np.savetxt(self.output_folder+'z_chi.txt', self.z_interp_1D)
-      np.savetxt(self.output_folder+'chi_z.txt', chi)
-      #-------------------------------------------------------
-      #-------------------------------------------------------
-      
-      
+      np.savetxt(self.print_datavector_file+f'_{int(self.evaluation_counter)}', out, fmt = fmt)
       
       #-------------------------------------------------------
       #---output linear and nonlinear matter power spectrum---
       #-------------------------------------------------------
+      h = self.provider.get_param("H0")/100.0
       PKL  = self.provider.get_Pk_interpolator(("delta_tot", "delta_tot"), 
                                                 nonlinear=False, 
                                                 extrap_kmax=2.5e2*self.accuracyboost)
@@ -539,11 +535,22 @@ class _cosmolike_prototype_base(DataSetLikelihood):
             nonlinear=True, extrap_kmax =2.5e2*self.accuracyboost).logP(self.z_interp_2D,
             np.power(10.0,self.log10k_interp_2D)).flatten(order='F')+np.log(h**3)
       
-      np.savetxt(self.output_folder+'z_pk.txt', self.z_interp_2D)
-      np.savetxt(self.output_folder+'k_pk.txt', np.power(10.0,self.log10k_interp_2D))
-      np.savetxt(self.output_folder+'pkln.txt', lnPL)
-      np.savetxt(self.output_folder+'pknl.txt', lnPNL)
+      np.savetxt(self.output_folder+f'z_pk_{int(self.evaluation_counter)}.txt', self.z_interp_2D)
+      np.savetxt(self.output_folder+f'k_pk_{int(self.evaluation_counter)}.txt', np.power(10.0,self.log10k_interp_2D))
+      np.savetxt(self.output_folder+f'pkln_{int(self.evaluation_counter)}.txt', lnPL)
+      np.savetxt(self.output_folder+f'pknl_{int(self.evaluation_counter)}.txt', lnPNL)
       #-----------------------------------------------------------
       #------------------------------------------------------------
+      self.evaluation_counter += 1
+      
+      if self.debug_output:
+        #-------------------------------------------------------
+        #-------------------output for chi(z)-------------------
+        #-------------------------------------------------------
+        chi=self.provider.get_comoving_radial_distance(self.z_interp_1D)*h
+        np.savetxt(self.output_folder+'z_chi.txt', self.z_interp_1D)
+        np.savetxt(self.output_folder+'chi_z.txt', chi)
+        #-------------------------------------------------------
+        #-------------------------------------------------------
       
     return datavector

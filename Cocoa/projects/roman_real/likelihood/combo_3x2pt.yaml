@@ -41,5 +41,7 @@ filename_baryon_pca: "./projects/desy1xplanck/chains/pca.txt"
 print_datavector: False
 print_datavector_file: "./projects/roman_real/chains/theory.modelvector"
 output_folder: ./projects/roman_real/chains/
+debug_output: True
+compute_log_posterior: True
 
 params: !defaults [params_source, params_lens]

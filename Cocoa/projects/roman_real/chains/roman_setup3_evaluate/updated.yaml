@@ -76,6 +76,7 @@ likelihood:
     print_datavector: true
     print_datavector_file: ./projects/roman_real/chains/roman_setup3_evaluate/roman.modelvector
     output_folder: ./projects/roman_real/chains/roman_setup3_evaluate/
+    debug_output: true
     type: []
     stop_at_error: false
     version: null
