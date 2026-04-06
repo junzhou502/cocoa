@@ -55,7 +55,8 @@ likelihood:
     IA_model: 0
     external_nz_modeling: 0
     use_emulator: false
-    adopt_limber_gg: 1
+    implement_bin_average: 0
+    adopt_nolimber_gg: 0
     adopt_RSD_gg: 1
     adopt_RSD_gs: 1
     NCell_interpolation: 300
@@ -76,6 +77,8 @@ likelihood:
     print_datavector: true
     print_datavector_file: ./projects/roman_real/chains/roman_setup6_evaluate/roman.modelvector
     output_folder: ./projects/roman_real/chains/roman_setup6_evaluate/
+    debug_output: true
+    compute_log_posterior: true
     type: []
     stop_at_error: false
     version: null
