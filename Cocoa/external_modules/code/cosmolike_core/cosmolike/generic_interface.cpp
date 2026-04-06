@@ -233,7 +233,9 @@ std::tuple<std::string,int> get_baryon_sim_name_and_tag(std::string sim)
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 
-void initial_setup(const int adopt_limber_gg,
+void initial_setup(
+  const int implement_bin_average,
+  const int adopt_nolimber_gg,
   const int adopt_RSD_gg,
   const int adopt_RSD_gs,
   const int NCell_interpolation,
@@ -271,7 +273,8 @@ void initial_setup(const int adopt_limber_gg,
   reset_cmb_struct();
 
     // plug in
-  like.adopt_limber_gg = adopt_limber_gg;
+  like.implement_bin_average = implement_bin_average;
+  like.adopt_nolimber_gg = adopt_nolimber_gg;
   like.adopt_RSD_gg = adopt_RSD_gg;
   like.adopt_RSD_gs = adopt_RSD_gs;
   like.NCell_interpolation = NCell_interpolation;

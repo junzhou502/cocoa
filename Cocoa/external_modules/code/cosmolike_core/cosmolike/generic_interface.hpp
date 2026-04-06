@@ -567,7 +567,9 @@ void init_probes(
     std::string possible_probes
   );
 
-void initial_setup(const int adopt_limber_gg,
+void initial_setup(
+  const int implement_bin_average,
+  const int adopt_nolimber_gg,
   const int adopt_RSD_gg,
   const int adopt_RSD_gs,
   const int NCell_interpolation,
@@ -1010,7 +1012,7 @@ void compute_X_N_masked(arma::Col<double>& dv, const int start)
           const int index = start + Nlen[N]*nz + i;
           if (survey.get_mask(index)) {
             if constexpr (N == 0) {  
-              dv(index) = w_gg_tomo(i, nz, nz, like.adopt_limber_gg);
+              dv(index) = w_gg_tomo(i, nz, nz, (!like.adopt_nolimber_gg));
             }
             else {
               dv(index) = C_gg_tomo_limber(like.ell[i], nz, nz);

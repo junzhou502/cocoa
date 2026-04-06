@@ -298,7 +298,8 @@ typedef struct
   int clusterWL;
   int clusterCG;
   int clusterCC;
-  int adopt_limber_gg;
+  int implement_bin_average;
+  int adopt_nolimber_gg;
   int adopt_RSD_gg;
   int adopt_RSD_gs;
   int NCell_interpolation;

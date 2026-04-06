@@ -59,11 +59,33 @@ static int has_b2_galaxies(void)
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 // Correlation Functions (real Space) - Full Sky - bin average
+// select curved sky or flat sky implementation
+double xi_pm_tomo(const int pm, const int nt, const int ni, const int nj, const int limber)
+{
+    if (like.implement_bin_average == 1) {
+        return xi_pm_tomo_bin_average(pm, nt, ni, nj, limber);
+    }
+    return xi_pm_tomo_no_average(pm, nt, ni, nj, limber);
+}
+double w_gammat_tomo(const int nt, const int ni, const int nj, const int limber)
+{
+  if (like.implement_bin_average == 1) {
+    return w_gammat_tomo_bin_average(nt, ni, nj, limber);
+  }
+  return w_gammat_tomo_no_average(nt, ni, nj, limber);
+}
+double w_gg_tomo(const int nt, const int ni, const int nj, const int limber)
+{
+  if (like.implement_bin_average == 1) {
+    return w_gg_tomo_bin_average(nt, ni, nj, limber);
+  }
+  return w_gg_tomo_no_average(nt, ni, nj, limber);
+}
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
-/*
-double xi_pm_tomo(
+
+double xi_pm_tomo_bin_average(
     const int pm, 
     const int nt, 
     const int ni, 
@@ -253,7 +275,7 @@ double xi_pm_tomo(
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 
-double w_gammat_tomo(const int nt, const int ni, const int nj, const int limber)
+double w_gammat_tomo_bin_average(const int nt, const int ni, const int nj, const int limber)
 {
   static double** Pl = NULL;
   static double* w_vec = NULL;
@@ -406,7 +428,7 @@ double w_gammat_tomo(const int nt, const int ni, const int nj, const int limber)
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 
-double w_gg_tomo(const int nt, const int ni, const int nj, const int limber)
+double w_gg_tomo_bin_average(const int nt, const int ni, const int nj, const int limber)
 {
   static double** Pl = NULL;
   static double* w_vec = NULL;
@@ -565,8 +587,8 @@ double w_gg_tomo(const int nt, const int ni, const int nj, const int limber)
   }  
   return w_vec[q];
 }
-*/
-double xi_pm_tomo(
+
+double xi_pm_tomo_no_average(
     const int pm, 
     const int nt, 
     const int ni, 
@@ -698,7 +720,7 @@ double xi_pm_tomo(
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 
-double w_gammat_tomo(const int nt, const int ni, const int nj, const int limber)
+double w_gammat_tomo_no_average(const int nt, const int ni, const int nj, const int limber)
 {
   static double** Pl = NULL;
   static double* w_vec = NULL;
@@ -810,7 +832,7 @@ double w_gammat_tomo(const int nt, const int ni, const int nj, const int limber)
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 
-double w_gg_tomo(const int nt, const int ni, const int nj, const int limber)
+double w_gg_tomo_no_average(const int nt, const int ni, const int nj, const int limber)
 {
   static double** Pl = NULL;
   static double* w_vec = NULL;

@@ -21,14 +21,18 @@ extern "C" {
 // ----------------------------------------------------------------------------
 
 // ss in real space
-double xi_pm_tomo(
-    const int pm, const int nt, const int ni, const int nj, const int limber);
+double xi_pm_tomo(const int pm, const int nt, const int ni, const int nj, const int limber);
+double xi_pm_tomo_bin_average(const int pm, const int nt, const int ni, const int nj, const int limber);
+double xi_pm_tomo_no_average(const int pm, const int nt, const int ni, const int nj, const int limber);
 
 // gs in real space
 double w_gammat_tomo(const int nt, const int ni, const int nj, const int limber);
+double w_gammat_tomo_bin_average(const int nt, const int ni, const int nj, const int limber);
+double w_gammat_tomo_no_average(const int nt, const int ni, const int nj, const int limber);
 
 double w_gg_tomo(const int nt, const int ni, const int nj, const int limber);
-
+double w_gg_tomo_bin_average(const int nt, const int ni, const int nj, const int limber);
+double w_gg_tomo_no_average(const int nt, const int ni, const int nj, const int limber);
 double w_gk_tomo(const int nt, const int ni, const int limber);
 
 double w_ks_tomo(const int nt, const int ni, const int limber);

@@ -18,7 +18,8 @@ external_nz_modeling: 0
 use_emulator: False
 
 # options for comparisons
-adopt_limber_gg: 0
+implement_bin_average: 1
+adopt_nolimber_gg: 1
 adopt_RSD_gg: 1
 adopt_RSD_gs: 1
 NCell_interpolation: 300 #base:300

@@ -106,7 +106,8 @@ void reset_like_struct(void)
   like.sy = 0;
   like.ky = 0;
   like.yy = 0;
-  like.adopt_limber_gg = 0;
+  like.implement_bin_average = 1;
+  like.adopt_nolimber_gg = 1;
   like.adopt_RSD_gg = 1;
   like.adopt_RSD_gs = 1;
   like.NCell_interpolation = 300;

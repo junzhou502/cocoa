@@ -17,6 +17,14 @@ IA_model: 0
 external_nz_modeling: 0
 use_emulator: False
 
+# options for comparisons
+implement_bin_average: 1
+adopt_nolimber_gg: 1
+adopt_RSD_gg: 1
+adopt_RSD_gs: 1
+NCell_interpolation: 300 #base:300
+Na_interpolation: 225 #base:225
+
 # REQUIRE GGL_EXCLUDE TO MATCH THE SIZE OF THE 3x2pt DATA VECTOR
 ggl_exclude: [[6,0],[7,0],[7,1]]
 
