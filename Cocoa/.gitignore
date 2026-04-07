@@ -51,7 +51,6 @@ external_modules/data/cosmo*
 
 
 projects/desxplanck
-projects/lsst_fourier
 projects/des_y3
 projects/cocoa_desxplanck
 projects/cocoa_lsst_fourier
@@ -192,5 +191,4 @@ cobaya/cobaya/likelihoods/act*/
 
 
 projects/lsst_y1/
-projects/lsst*/
 projects/des*/

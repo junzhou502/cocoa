@@ -1,0 +1,11 @@
+data_file = lsst_ones.mask
+cov_file = cov_lsst_eyes
+mask_file = lsst_ones.mask
+nz_lens_file = lsst_lens_4cosmolike.nz
+nz_source_file = lsst_srcs_4cosmolike.nz
+lens_ntomo = 10
+source_ntomo = 5
+n_cl = 20
+l_min= 20
+l_max = 4000
+l_max_shear = 4000

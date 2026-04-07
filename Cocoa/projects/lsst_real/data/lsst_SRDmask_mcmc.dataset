@@ -1,0 +1,10 @@
+data_file = lsst_baseline.modelvector
+cov_file = cov_lsst
+mask_file = lsst_SRD.mask
+nz_lens_file = lsst_lens_4cosmolike.nz
+nz_source_file = lsst_srcs_4cosmolike.nz
+lens_ntomo = 10
+source_ntomo = 5
+n_theta = 20
+theta_min_arcmin = 1.
+theta_max_arcmin = 500.

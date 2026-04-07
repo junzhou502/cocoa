@@ -4,6 +4,7 @@ import os
 import numpy as np
 import scipy
 from scipy.interpolate import UnivariateSpline
+from scipy.interpolate import interp1d
 import sys
 import time
 
@@ -15,9 +16,9 @@ from getdist import IniFile
 import euclidemu2 as ee2
 import math
 
-import cosmolike_roman_fourier_interface as ci
+import cosmolike_lsst_fourier_interface as ci
 
-survey = "roman"
+survey = "LSST"
 
 class _cosmolike_prototype_base(DataSetLikelihood):
 
@@ -36,26 +37,12 @@ class _cosmolike_prototype_base(DataSetLikelihood):
     self.l_max = ini.float("l_max")
     self.l_max_shear = ini.float("l_max_shear")
     self.evaluation_counter = 1
-    # ------------------------------------------------------------------------ 
-    # ---------------------------origin grids---------------------------------
-    # ------------------------------------------------------------------------  
+    # ------------------------------------------------------------------------   
     tmp=int(1000 + 250*self.accuracyboost)
     self.z_interp_1D = np.concatenate((np.linspace(0.0,3.0,max(100,int(0.80*tmp))),
                                        np.linspace(3.0,50.1,max(100,int(0.40*tmp))),
                                        np.linspace(1070,1100,max(50,int(0.10*tmp)))),axis=0)
     self.len_z_interp_1D = len(self.z_interp_1D)
-
-    #-------------------------------------------------------------------------
-    #----------------temporary change the redshift used-----------------------
-    #-----------------by comving radial distance for -------------------------
-    #--------------------easier comaprison -----------------------------------
-    #temp = np.concatenate((np.exp(np.linspace(np.log(1e-4), np.log(0.1), 250)), np.linspace(0.1,1,250)))
-    #temp = (1/temp-1)[::-1]
-    #temp = temp[temp<1100]
-    #self.z_interp_1D = temp
-    #self.len_z_interp_1D = len(self.z_interp_1D)
-    #-------------------------------------------------------------------------
-    #-------------------------------------------------------------------------
 
     tmp=int(min(120 + 20*self.accuracyboost,250))
     self.z_interp_2D = np.concatenate((np.linspace(0,3.0,max(50,int(0.75*tmp))), 
@@ -65,15 +52,17 @@ class _cosmolike_prototype_base(DataSetLikelihood):
     self.log10k_interp_2D = np.linspace(-4.99,2.0,int(1250+250*self.accuracyboost))
     self.len_log10k_interp_2D = len(self.log10k_interp_2D)
     # ------------------------------------------------------------------------
-    # ------------------------------------------------------------------------
+
     ci.initial_setup(
-      self.adopt_limber_gg,
+      self.implement_bin_average,
+      self.adopt_nolimber_gg,
       self.adopt_RSD_gg,
       self.adopt_RSD_gs,
       self.NCell_interpolation,
       self.Na_interpolation,)
     
-    self.log.info(' adopt_limber_gg = %d ', self.adopt_limber_gg)
+    self.log.info(' implement_bin_average = %d ', self.implement_bin_average)
+    self.log.info(' adopt_nolimber_gg = %d ', self.adopt_nolimber_gg)
     self.log.info(' adopt_RSD_gg = %d ', self.adopt_RSD_gg)
     self.log.info(' adopt_RSD_gs = %d ', self.adopt_RSD_gs)
     self.log.info(' NCell_interpolation = %d ', self.NCell_interpolation)
@@ -140,7 +129,7 @@ class _cosmolike_prototype_base(DataSetLikelihood):
         if self.add_baryons_on_dv:
           sim = self.which_bsims_add_on_dv
           self.allsims = ini.relativeFileName('all_sims_hdf5_file')
-          ci.init_baryons_contamination(sim = sim, allsims=allsims)
+          ci.init_baryons_contamination(sim = sim, allsims=self.allsims)
 
     if self.use_baryon_pca:
       baryon_pca_file = ini.relativeFileName('baryon_pca_file')
@@ -237,20 +226,27 @@ class _cosmolike_prototype_base(DataSetLikelihood):
           'wa'   : 0.0
         }
         kbt, tmp_bt = ee2.get_boost2(params, 
-                                     self.z_interp_2D, 
+                                     self.z_interp_2D[self.z_interp_2D < 10.0], 
                                      self.emulator, 
                                      10**np.linspace(-2.0589,0.973,self.len_log10k_interp_2D))
-        bt = np.array([tmp_bt[i] for i in range(self.len_z_interp_2D)],dtype='float64')  
-        lnbt = interp1d(np.log10(kbt), 
+        bt = np.array(tmp_bt, dtype='float64')
+        tmp = interp1d(np.log10(kbt), 
                         np.log(bt), 
                         axis=1,
                         kind='linear', 
                         fill_value='extrapolate', 
                         assume_sorted=True)(self.log10k_interp_2D-np.log10(h)) #h/Mpc
-        lnbt[:,10**(self.log10k_interp_2D-np.log10(h)) < 8.73e-3] = 0.0
-        lnPNL=(lnPL.reshape(self.len_z_interp_2D, 
-                            self.len_log10k_interp_2D, 
-                            order='F') + lnbt).ravel(order='F')
+        tmp[:,10**(self.log10k_interp_2D-np.log10(h)) < 8.73e-3] = 0.0
+        lnbt = np.zeros((self.len_z_interp_2D, self.len_log10k_interp_2D))
+        lnbt[self.z_interp_2D < 10.0, :] = tmp
+        # Use Halofit first that works on all redshifts
+        lnPNL = self.provider.get_Pk_interpolator(("delta_tot", "delta_tot"),
+          nonlinear=True, extrap_kmax =2.5e2*self.accuracyboost).logP(self.z_interp_2D,
+          np.power(10.0,self.log10k_interp_2D)).flatten(order='F')+np.log(h**3) 
+        # on z < 10.0, replace it with EE2
+        lnPNL = np.where((self.z_interp_2D<10)[:,None], 
+          lnPL.reshape(self.len_z_interp_2D,self.len_log10k_interp_2D,order='F')+lnbt, 
+          lnPNL.reshape(self.len_z_interp_2D,self.len_log10k_interp_2D,order='F')).ravel(order='F')
       elif self.non_linear_emul == 2:
         lnPNL = self.provider.get_Pk_interpolator(("delta_tot", "delta_tot"),
           nonlinear=True, extrap_kmax =2.5e2*self.accuracyboost).logP(self.z_interp_2D,
@@ -406,27 +402,9 @@ class _cosmolike_prototype_base(DataSetLikelihood):
       out[:,1] = datavector
       fmt = '%d', '%1.8e'
       np.savetxt(self.print_datavector_file+f'_{int(self.evaluation_counter)}', out, fmt = fmt)
-      #-------------------------------------------------------
-      #-------------------output for chi(z)-------------------
-      #-------------------------------------------------------
+      
       h = self.provider.get_param("H0")/100.0
-      chi=self.provider.get_comoving_radial_distance(self.z_interp_1D)*h
-      np.savetxt(self.output_folder+'z_chi.txt', self.z_interp_1D)
-      np.savetxt(self.output_folder+'chi_z.txt', chi)
-      #-------------------------------------------------------------
-      #---------------output for radial kernel----------------------
-      #-------------------------------------------------------------
-      chi = np.load('./projects/roman_fourier/data/chis_4_radial_kernel.npy')
-      radi = ci.get_radial_kernel(chi)
-      np.savetxt(self.output_folder+'chi_of_radial_kernel.txt',chi)
-      np.savetxt(self.output_folder+'radial_kernel.txt', radi)
-      #-------------------------------------------------------------
-      #---------------output for lensing kernel----------------------
-      #-------------------------------------------------------------
-      chi = np.loadtxt('./projects/roman_fourier/data/chis-4-lensing-efficiency.txt')[1:]
-      eff = ci.get_lensing_efficiency(chi)
-      np.savetxt(self.output_folder+'chi_of_lensing_efficiency.txt', chi)
-      np.savetxt(self.output_folder+'lensing_efficiency.txt', eff)
+  
       #-------------------------------------------------------
       #---output linear and nonlinear matter power spectrum---
       #-------------------------------------------------------
