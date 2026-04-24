@@ -18,7 +18,7 @@ likelihood:
     print_datavector: True
     print_datavector_file: ./projects/roman_real/chains/roman_setup1_evaluate/roman.modelvector
     output_folder: ./projects/roman_real/chains/roman_setup1_evaluate/
-    implement_bin_average: 0
+    implement_bin_average: 1
     adopt_nolimber_gg: 0
     adopt_RSD_gg: 0
     adopt_RSD_gs: 0

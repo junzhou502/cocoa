@@ -2075,6 +2075,84 @@ double C_gg_tomo_limber(const double l, const int ni, const int nj)
   return interpol1d(table[q], nell, lnlmin, lnlmax, dlnl, lnl);
 }
 
+double C_gg_tomo_nolimber(const double l, const int ni, const int nj)
+{ // cross redshift bin not supported
+  static double cache[MAX_SIZE_ARRAYS];
+  static double** Cl = NULL; 
+  
+  if (0 == Ntable.Ntheta) {
+    log_fatal("Ntable.Ntheta not initialized");
+    exit(1);
+  }
+
+  const int NSIZE = tomo.clustering_Npowerspectra;
+
+  if (NULL == Cl || fdiff(cache[3], Ntable.random))
+  {
+    const int lmin = 1;
+
+    if (Cl != NULL) {
+      free(Cl);
+    }
+    Cl = (double**) malloc2d(NSIZE, Ntable.LMAX);
+  }
+
+  if (fdiff(cache[0], cosmology.random) || 
+      fdiff(cache[1], nuisance.random_photoz_clustering) ||
+      fdiff(cache[2], redshift.random_clustering) ||
+      fdiff(cache[3], Ntable.random) ||
+      fdiff(cache[4], nuisance.random_galaxy_bias))
+  {
+    const int lmin = 1;
+    for (int i=0; i<NSIZE; i++) {
+      for (int l=0; l<lmin; l++) {
+        Cl[i][l] = 0.0;
+      }
+    }               
+    { // init static variables inside the C_XY_limber function
+      (void) C_gg_tomo_limber(limits.LMIN_tab + 1, 0, 0);
+    }
+
+      for (int nz=0; nz<NSIZE; nz++) {
+        const int L = 1;
+        const double tolerance = 0.0001;     // required fractional accuracy in C(l)
+        const double dev = 10. * tolerance; // will be diff  exact vs Limber init to
+                                            // large value in order to start while loop
+        const int Z1 = nz; // cross redshift bin not supported so not using ZCL1(k)
+        const int Z2 = nz; // cross redshift bin not supported so not using ZCL2(k)
+        
+        C_cl_tomo(L, Z1, Z2, Cl[nz], dev, tolerance);
+      }
+
+      #pragma omp parallel for collapse(2)
+      for (int nz=0; nz<NSIZE; nz++) { // LIMBER PART
+        for (int l=limits.LMAX_NOLIMBER+1; l<Ntable.LMAX; l++) {
+          Cl[nz][l] = C_gg_tomo_limber(l, nz, nz);
+        }
+      }
+
+    cache[0] = cosmology.random;
+    cache[1] = nuisance.random_photoz_clustering;
+    cache[2] = redshift.random_clustering;
+    cache[3] = Ntable.random;
+    cache[4] = nuisance.random_galaxy_bias;
+  }
+
+  if (ni < -1 || 
+      ni > redshift.clustering_nbin - 1 || 
+      nj < -1 || 
+      nj > redshift.clustering_nbin - 1)
+  {
+    log_fatal("error in selecting bin number (ni, nj) = [%d,%d]", ni, nj);
+    exit(1);
+  }
+  if (ni != nj) {
+    log_fatal("ni != nj tomography not supported");
+    exit(1);
+  }
+
+  return interp_Cl_linear(l, Cl[ni], 1, Ntable.LMAX-1);
+}
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
@@ -3163,6 +3241,125 @@ void C_cl_tomo(
   free(ell_ar);
 }
 
+double C_cl_tomo_2(
+    double L, 
+    const int ni, 
+    const int nj 
+  )
+{
+  if (ni < -1 || ni > redshift.clustering_nbin - 1 || 
+      nj < -1 || nj > redshift.clustering_nbin - 1)
+  {
+    log_fatal("error in selecting bin number (ni, nj) = [%d,%d]", ni, nj);
+    exit(1);
+  }
+  if (ni != nj)
+  {
+    log_fatal("Cocoa disabled cross-spectrum w_gg");
+    exit(1);
+  }
+    
+  const double real_coverH0 = cosmology.coverH0/cosmology.h0;
+  const double chi_min = chi(1./(1.0 + 0.002))*real_coverH0; // DIMENSIONELESS
+  const double chi_max = chi(1./(1.0 + 4.0))*real_coverH0;   // DIMENSIONELESS
+  const double dlnchi = log(chi_max/chi_min) / ((double) Ntable.NL_Nchi - 1.0);
+  const double dlnk = dlnchi;
+
+  double Cl = 0;
+  double* ell_ar = (double*) malloc(sizeof(double)*1);
+  double*** Fk1 = (double***) malloc3d(3, 1, Ntable.NL_Nchi); // (Fk1, Fk1_Mag, k1)    
+  double** f1_chi = (double**) malloc2d(4, Ntable.NL_Nchi); // (f1, f1_RSD, f1_MAG, chi)
+
+  #pragma omp parallel for
+  for (int i=0; i<Ntable.NL_Nchi; i++)
+  {
+    f1_chi[3][i] = chi_min * exp(dlnchi * i); 
+    const double a = a_chi(f1_chi[3][i]/real_coverH0);
+    const double z = 1. / a - 1.;
+    
+    if (z < redshift.clustering_zdist_zmin[ni] || 
+        z > redshift.clustering_zdist_zmax[ni]) { 
+      f1_chi[0][i] = 0.;
+      f1_chi[1][i] = 0.;
+      f1_chi[2][i] = 0.;
+    }
+    else {
+      const double pf = pf_photoz(z,ni);
+      const double hoverh0_a = hoverh0(a);
+      const double fK = f_K(f1_chi[3][i]/real_coverH0); 
+      const double WM = W_mag(a, fK, ni);
+      struct growths growfac_a = growfac_all(a);
+      const double D = growfac_a.D;
+      const double f = growfac_a.f;
+
+      f1_chi[0][i] = gb1(z, ni)*f1_chi[3][i]*pf*D*hoverh0_a/real_coverH0;
+      f1_chi[1][i] = -f1_chi[3][i]*pf*D*f*hoverh0_a/real_coverH0;
+      f1_chi[2][i] = (WM/fK/(real_coverH0*real_coverH0)) * D; // [Mpc^-2] 
+    }
+  }
+
+  config cfg;
+  cfg.nu = 1.;
+  cfg.c_window_width = 0.25;
+  cfg.derivative = 0;
+  cfg.N_pad = 200;
+  cfg.N_extrap_low = 0;
+  cfg.N_extrap_high = 0;
+
+  config cfg_RSD;
+  cfg_RSD.nu = 1.01;
+  cfg_RSD.c_window_width = 0.25;
+  cfg_RSD.derivative = 2;
+  cfg_RSD.N_pad = 500;
+  cfg_RSD.N_extrap_low = 0;
+  cfg_RSD.N_extrap_high = 0;
+
+  config cfg_Mag;
+  cfg_Mag.nu = 1.;
+  cfg_Mag.c_window_width = 0.25;
+  cfg_Mag.derivative = 0;
+  cfg_Mag.N_pad = 500;
+  cfg_Mag.N_extrap_low = 0;
+  cfg_Mag.N_extrap_high = 0;
+
+  ell_ar[0] = L;
+
+  cfftlog_ells_double(f1_chi[3], f1_chi[0], Ntable.NL_Nchi, &cfg, ell_ar, 1, Fk1[2], Fk1[0]);
+    
+  if(like.adopt_RSD_gg == 1)
+    cfftlog_ells_increment_double(f1_chi[3], f1_chi[1], Ntable.NL_Nchi, &cfg_RSD, ell_ar, 1, Fk1[2], Fk1[0]);   
+    
+  cfftlog_ells_double(f1_chi[3], f1_chi[2], Ntable.NL_Nchi, &cfg_Mag, ell_ar, 1, Fk1[2], Fk1[1]);    
+    
+
+  { // init static variables inside the C_XY_limber_nointerp function
+    (void) p_lin(Fk1[2][0][0]*real_coverH0, 1.0);
+    (void) C_gg_tomo_limber_nointerp((double) 100, 0, 0, 1);
+  }
+
+  for (int i=0; i<1; i++)
+  {
+    const double ell_prefactor = L * (L + 1.);
+
+    double cl_temp = 0.;
+    //#pragma omp parallel for reduction(+:cl_temp)
+    for (int j=0; j<Ntable.NL_Nchi; j++) {
+      Fk1[0][i][j] += gbmag(0.0, ni)*ell_prefactor*Fk1[1][i][j]/(Fk1[2][i][j]*Fk1[2][i][j]);
+      const double k1cH0 = Fk1[2][i][j] * real_coverH0;
+      cl_temp += Fk1[0][i][j]*Fk1[0][i][j]*(k1cH0*k1cH0*k1cH0)*p_lin(k1cH0,1);
+    }
+    
+    Cl = cl_temp * dlnk * 2. / M_PI + 
+        C_gg_tomo_limber_linpsopt_nointerp(L, ni, nj, 0, 0)
+      -C_gg_tomo_limber_linpsopt_nointerp(L, ni, nj, 1, 0);
+  }
+  
+  free(ell_ar);
+  free(Fk1);
+  free(f1_chi);
+
+  return Cl;
+}
 
 double get_radial_kernel_single(double a, int ni)
 {

@@ -51,6 +51,8 @@ double C_gs_tomo_limber(const double l, const int ni, const int nj);
 
 double C_gg_tomo_limber(const double l, const int ni, const int nj);
 
+double C_gg_tomo_nolimber(const double l, const int ni, const int nj);
+
 double C_ks_tomo_limber(const double l, const int ni);
 
 double C_gk_tomo_limber(const double l, const int ni);
@@ -125,7 +127,7 @@ double int_for_C_yy_limber(double a, void *params);
 // ----------------------------------------------------------------------------
 
 void C_cl_tomo(int L, int ni, int nj, double *Cl, double dev, double tolerance);
-
+double C_cl_tomo_2(double L, const int ni, const int nj );
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------

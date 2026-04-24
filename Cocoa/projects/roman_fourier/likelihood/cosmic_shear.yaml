@@ -16,6 +16,14 @@ IA_model: 0
 external_nz_modeling: 0
 use_emulator: False
 
+# options for comparisons
+implement_bin_average: 1
+adopt_nolimber_gg: 1
+adopt_RSD_gg: 1
+adopt_RSD_gs: 1
+NCell_interpolation: 300 #base:300
+Na_interpolation: 225 #base:225
+
 # exclude ggl nl-ns bin pairs (need even here to set the dv size)
 ggl_exclude: [[4,0],[5,0],[6,0],[6,1],[6,2],[7,0],[7,1],[7,2],[7,3]]
 

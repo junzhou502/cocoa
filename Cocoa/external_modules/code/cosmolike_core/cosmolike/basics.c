@@ -395,6 +395,45 @@ double interpol1d(
   return ans;
 }
 
+#include <math.h>
+
+double interp_Cl_linear(
+    const double ell,
+    const double *Cl_table,
+    const int lmin,
+    const int lmax)
+{
+  if (Cl_table == NULL) {
+    log_fatal("interp_Cl_linear: Cl_table is NULL");
+    exit(1);
+  }
+
+  if (lmax <= lmin) {
+    log_fatal("interp_Cl_linear: invalid range lmin=%d lmax=%d", lmin, lmax);
+    exit(1);
+  }
+
+  if (ell <= (double)lmin) {
+    return Cl_table[lmin];
+  }
+
+  if (ell >= (double)lmax) {
+    return Cl_table[lmax];
+  }
+
+  const int l0 = (int)ell;
+  const int l1 = l0 + 1;
+
+  if (l0 < lmin || l1 > lmax) {
+    log_fatal("interp_Cl_linear: ell=%e gives out-of-range indices [%d,%d] for [%d,%d]",
+              ell, l0, l1, lmin, lmax);
+    exit(1);
+  }
+
+  const double t = ell - (double)l0;  // because l1-l0 = 1
+  return (1.0 - t) * Cl_table[l0] + t * Cl_table[l1];
+}
+
 int line_count(char* filename) 
 {  
   FILE* ein = fopen(filename, "r");

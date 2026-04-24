@@ -54,10 +54,10 @@ likelihood:
     IA_model: 0
     external_nz_modeling: 0
     use_emulator: false
-    adopt_limber_gg: 0
-    adopt_limber_gs: 1
-    adopt_RSD_gg: 1
-    adopt_RSD_gs: 1
+    implement_bin_average: 1
+    adopt_nolimber_gg: 0
+    adopt_RSD_gg: 0
+    adopt_RSD_gs: 0
     NCell_interpolation: 300
     Na_interpolation: 225
     ggl_exclude: []

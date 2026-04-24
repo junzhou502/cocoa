@@ -570,6 +570,7 @@ void init_probes(
 void initial_setup(
   const int implement_bin_average,
   const int adopt_nolimber_gg,
+  const int lmax_nolimber,
   const int adopt_RSD_gg,
   const int adopt_RSD_gs,
   const int NCell_interpolation,
@@ -1008,6 +1009,7 @@ void compute_X_N_masked(arma::Col<double>& dv, const int start)
   else if constexpr (2 == M) {
     if (1 == like.pos_pos) {
       for (int nz=0; nz<tomo.clustering_Npowerspectra; nz++) {
+        bool OVERSHOOT = false;
         for (int i=0; i<Nlen[N]; i++) {
           const int index = start + Nlen[N]*nz + i;
           if (survey.get_mask(index)) {
@@ -1015,7 +1017,18 @@ void compute_X_N_masked(arma::Col<double>& dv, const int start)
               dv(index) = w_gg_tomo(i, nz, nz, (!like.adopt_nolimber_gg));
             }
             else {
-              dv(index) = C_gg_tomo_limber(like.ell[i], nz, nz);
+              if (1 == like.adopt_nolimber_gg)
+                {
+                  if(!OVERSHOOT){
+                    dv(index) = C_cl_tomo_2(like.ell[i], nz, nz);
+                    if (like.ell[i]>limits.LMAX_NOLIMBER)
+                      OVERSHOOT = true;
+                  }
+                  else
+                    dv(index) = C_gg_tomo_limber_nointerp(like.ell[i], nz, nz, 0);
+                }
+              else
+                dv(index) = C_gg_tomo_limber_nointerp(like.ell[i], nz, nz, 0);
             }
           }
         }

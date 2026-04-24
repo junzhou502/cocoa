@@ -56,6 +56,12 @@ double interpol1d(
   const double dx, 
   const double x); 
 
+double interp_Cl_linear(
+    const double ell,
+    const double *Cl_table,
+    const int lmin,
+    const int lmax);
+
 double interpol2d(double **f, int nx, double ax, double bx, double dx, double x,
   int ny, double ay, double by, double dy, double y);
 

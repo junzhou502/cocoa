@@ -22,6 +22,12 @@ double** y, double** Fy);
 void cfftlog_ells_increment(double* x, double* fx, long N, config* config, int* ell, long Nell, 
 double** y, double** Fy);
 
+void cfftlog_ells_double(double* x, double* fx, long N, config* config, double* ell, long Nell, 
+double** y, double** Fy);
+
+void cfftlog_ells_increment_double(double* x, double* fx, long N, config* config, double* ell, long Nell, 
+double** y, double** Fy);
+
 #ifdef __cplusplus
 }
 #endif
