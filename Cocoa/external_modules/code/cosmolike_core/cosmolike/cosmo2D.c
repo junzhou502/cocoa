@@ -3361,6 +3361,130 @@ double C_cl_tomo_2(
   return Cl;
 }
 
+void C_cl_tomo_nointerp(
+    double* ells,
+    int n_ell, 
+    double* Cl,
+    const int ni, 
+    const int nj 
+  )
+{
+  if (ni < -1 || ni > redshift.clustering_nbin - 1 || 
+      nj < -1 || nj > redshift.clustering_nbin - 1)
+  {
+    log_fatal("error in selecting bin number (ni, nj) = [%d,%d]", ni, nj);
+    exit(1);
+  }
+  if (ni != nj)
+  {
+    log_fatal("Cocoa disabled cross-spectrum w_gg");
+    exit(1);
+  }
+    
+  const double real_coverH0 = cosmology.coverH0/cosmology.h0;
+  const double chi_min = chi(1./(1.0 + 0.002))*real_coverH0; // DIMENSIONELESS
+  const double chi_max = chi(1./(1.0 + 4.0))*real_coverH0;   // DIMENSIONELESS
+  const double dlnchi = log(chi_max/chi_min) / ((double) Ntable.NL_Nchi - 1.0);
+  const double dlnk = dlnchi;
+
+  Ntable.NL_Nell_block = n_ell;
+  double* ell_ar = (double*) malloc1d(sizeof(double)*n_ell);
+  double*** Fk1 = (double***) malloc3d(3, Ntable.NL_Nell_block, Ntable.NL_Nchi); // (Fk1, Fk1_Mag, k1)    
+  double** f1_chi = (double**) malloc2d(4, Ntable.NL_Nchi); // (f1, f1_RSD, f1_MAG, chi)
+
+  for (int i=0; i<n_ell; i++)
+    ell_ar[i] = ells[i];
+
+  #pragma omp parallel for
+  for (int i=0; i<Ntable.NL_Nchi; i++)
+  {
+    f1_chi[3][i] = chi_min * exp(dlnchi * i); 
+    const double a = a_chi(f1_chi[3][i]/real_coverH0);
+    const double z = 1. / a - 1.;
+    
+    if (z < redshift.clustering_zdist_zmin[ni] || 
+        z > redshift.clustering_zdist_zmax[ni]) { 
+      f1_chi[0][i] = 0.;
+      f1_chi[1][i] = 0.;
+      f1_chi[2][i] = 0.;
+    }
+    else {
+      const double pf = pf_photoz(z,ni);
+      const double hoverh0_a = hoverh0(a);
+      const double fK = f_K(f1_chi[3][i]/real_coverH0); 
+      const double WM = W_mag(a, fK, ni);
+      struct growths growfac_a = growfac_all(a);
+      const double D = growfac_a.D;
+      const double f = growfac_a.f;
+
+      f1_chi[0][i] = gb1(z, ni)*f1_chi[3][i]*pf*D*hoverh0_a/real_coverH0;
+      f1_chi[1][i] = -f1_chi[3][i]*pf*D*f*hoverh0_a/real_coverH0;
+      f1_chi[2][i] = (WM/fK/(real_coverH0*real_coverH0)) * D; // [Mpc^-2] 
+    }
+  }
+
+  config cfg;
+  cfg.nu = 1.;
+  cfg.c_window_width = 0.25;
+  cfg.derivative = 0;
+  cfg.N_pad = 200;
+  cfg.N_extrap_low = 0;
+  cfg.N_extrap_high = 0;
+
+  config cfg_RSD;
+  cfg_RSD.nu = 1.01;
+  cfg_RSD.c_window_width = 0.25;
+  cfg_RSD.derivative = 2;
+  cfg_RSD.N_pad = 500;
+  cfg_RSD.N_extrap_low = 0;
+  cfg_RSD.N_extrap_high = 0;
+
+  config cfg_Mag;
+  cfg_Mag.nu = 1.;
+  cfg_Mag.c_window_width = 0.25;
+  cfg_Mag.derivative = 0;
+  cfg_Mag.N_pad = 500;
+  cfg_Mag.N_extrap_low = 0;
+  cfg_Mag.N_extrap_high = 0;
+
+  //VM: TODO - I can combine these 3 functions in one and thread them w/ OpenMP
+  cfftlog_ells_double(f1_chi[3], f1_chi[0], Ntable.NL_Nchi, &cfg, ell_ar, 
+                Ntable.NL_Nell_block, Fk1[2], Fk1[0]);
+  
+  if(like.adopt_RSD_gg == 1)
+    cfftlog_ells_increment_double(f1_chi[3], f1_chi[1], Ntable.NL_Nchi, &cfg_RSD, 
+                          ell_ar, Ntable.NL_Nell_block, Fk1[2], Fk1[0]);   
+  
+  cfftlog_ells_double(f1_chi[3], f1_chi[2], Ntable.NL_Nchi, &cfg_Mag, ell_ar, 
+                Ntable.NL_Nell_block, Fk1[2], Fk1[1]);    
+  
+  { // init static variables inside the C_XY_limber_nointerp function
+    (void) p_lin(Fk1[2][0][0]*real_coverH0, 1.0);
+    (void) C_gg_tomo_limber_nointerp((double) 100, 0, 0, 1);
+  }
+
+  #pragma omp parallel for
+  for (int i=0; i<Ntable.NL_Nell_block; i++)
+  {
+    const double ell_prefactor = ell_ar[i] * (ell_ar[i] + 1.);
+
+    double cl_temp = 0.;
+    //#pragma omp parallel for reduction(+:cl_temp)
+    for (int j=0; j<Ntable.NL_Nchi; j++) {
+      Fk1[0][i][j] += gbmag(0.0, ni)*ell_prefactor*Fk1[1][i][j]/(Fk1[2][i][j]*Fk1[2][i][j]);
+      const double k1cH0 = Fk1[2][i][j] * real_coverH0;
+      cl_temp += Fk1[0][i][j]*Fk1[0][i][j]*(k1cH0*k1cH0*k1cH0)*p_lin(k1cH0,1);
+    }
+    
+    Cl[i] = cl_temp * dlnk * 2. / M_PI + 
+        C_gg_tomo_limber_linpsopt_nointerp((double) ell_ar[i], ni, nj, 0, 0)
+      -C_gg_tomo_limber_linpsopt_nointerp((double) ell_ar[i], ni, nj, 1, 0);
+  }
+
+  free(Fk1);
+  free(f1_chi);
+}
+
 double get_radial_kernel_single(double a, int ni)
 {
   if (!(a>0) || !(a<=1)) {

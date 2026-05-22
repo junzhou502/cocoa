@@ -123,6 +123,7 @@ PYBIND11_MODULE(cosmolike_roman_real_interface, m)
       "Initialize Cosmolike Variables to their Default Values",
       py::arg("implement_bin_average").none(false).noconvert(),
       py::arg("adopt_nolimber_gg").none(false).noconvert(),
+      py::arg("lmax_nolimber").none(false).noconvert(),
       py::arg("adopt_RSD_gg").none(false).noconvert(),
       py::arg("adopt_RSD_gs").none(false).noconvert(),
       py::arg("NCell_interpolation").none(false).noconvert(),

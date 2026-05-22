@@ -55,8 +55,9 @@ likelihood:
     IA_model: 0
     external_nz_modeling: 0
     use_emulator: false
-    implement_bin_average: 1
-    adopt_nolimber_gg: 0
+    implement_bin_average: 0
+    adopt_nolimber_gg: 1
+    lmax_nolimber: 150
     adopt_RSD_gg: 1
     adopt_RSD_gs: 1
     NCell_interpolation: 300
@@ -775,34 +776,34 @@ params:
     value: 0.0
     latex: PM_\mathrm{roman}^{10}
   roman_BMAG_1:
-    value: 0.2
+    value: 0
     latex: b_\mathrm{BMAG-roman}^1
   roman_BMAG_2:
-    value: 0.2
+    value: 0
     latex: b_\mathrm{BMAG-roman}^2
   roman_BMAG_3:
-    value: 0.2
+    value: 0
     latex: b_\mathrm{BMAG-roman}^3
   roman_BMAG_4:
-    value: 0.2
+    value: 0
     latex: b_\mathrm{BMAG-roman}^4
   roman_BMAG_5:
-    value: 0.2
+    value: 0
     latex: b_\mathrm{BMAG-roman}^5
   roman_BMAG_6:
-    value: 0.2
+    value: 0
     latex: b_\mathrm{BMAG-roman}^6
   roman_BMAG_7:
-    value: 0.2
+    value: 0
     latex: b_\mathrm{BMAG-roman}^7
   roman_BMAG_8:
-    value: 0.2
+    value: 0
     latex: b_\mathrm{BMAG-roman}^8
   roman_BMAG_9:
-    value: 0.2
+    value: 0
     latex: b_\mathrm{BMAG-roman}^9
   roman_BMAG_10:
-    value: 0.2
+    value: 0
     latex: b_\mathrm{BMAG-roman}^{10}
   roman_A1_3:
     value: 0

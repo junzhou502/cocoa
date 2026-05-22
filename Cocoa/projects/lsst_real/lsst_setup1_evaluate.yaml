@@ -7,7 +7,7 @@ likelihood:
     path: ./projects/lsst_real/data/
     data_file: lsst_evaluate.dataset # that assumes lens = source
     lmax: 60000            
-    accuracyboost: 1.1      
+    accuracyboost: 1.0      
     integration_accuracy: 0
     kmax_boltzmann: 7.5
     # 1 EE2, 2 Halofit
@@ -20,10 +20,11 @@ likelihood:
     print_datavector_file: ./projects/lsst_real/chains/lsst_setup1_evaluate/lsst.modelvector
     output_folder: ./projects/lsst_real/chains/lsst_setup1_evaluate/
 
-    implement_bin_average: 0
-    adopt_nolimber_gg: 0
-    adopt_RSD_gg: 0
-    adopt_RSD_gs: 0
+    implement_bin_average: 1
+    lmax_nolimber: 150
+    adopt_nolimber_gg: 1
+    adopt_RSD_gg: 1
+    adopt_RSD_gs: 1
     NCell_interpolation: 300 #base:300
     Na_interpolation: 225 #base:225
 
@@ -599,7 +600,7 @@ sampler:
       LSST_M4: 0.0
       LSST_M5: 0.0
 
-      LSST_A1_1: 0
+      LSST_A1_1: 0.5
       LSST_A1_2: 0
 
       LSST_DZ_L1: 0.0
@@ -623,6 +624,7 @@ sampler:
       LSST_B1_8: 1.53
       LSST_B1_9: 1.60
       LSST_B1_10: 1.67
+
       w0pwa: -1.0
       w: -1.0
 

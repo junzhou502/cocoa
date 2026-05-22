@@ -44,7 +44,7 @@ likelihood:
   lsst_real.combo_3x2pt:
     path: ./projects/lsst_real/data/
     data_file: lsst_evaluate.dataset
-    accuracyboost: 1.1
+    accuracyboost: 1.0
     integration_accuracy: 0
     lmax: 60000
     kmax_boltzmann: 7.5
@@ -55,10 +55,11 @@ likelihood:
     IA_model: 0
     external_nz_modeling: 0
     use_emulator: false
-    implement_bin_average: 0
-    adopt_nolimber_gg: 0
-    adopt_RSD_gg: 0
-    adopt_RSD_gs: 0
+    implement_bin_average: 1
+    lmax_nolimber: 150
+    adopt_nolimber_gg: 1
+    adopt_RSD_gg: 1
+    adopt_RSD_gs: 1
     NCell_interpolation: 300
     Na_interpolation: 225
     ggl_exclude: []
@@ -813,7 +814,7 @@ sampler:
       LSST_M3: 0.0
       LSST_M4: 0.0
       LSST_M5: 0.0
-      LSST_A1_1: 0
+      LSST_A1_1: 0.5
       LSST_A1_2: 0
       LSST_DZ_L1: 0.0
       LSST_DZ_L2: 0.0

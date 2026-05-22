@@ -1009,7 +1009,54 @@ void compute_X_N_masked(arma::Col<double>& dv, const int start)
   else if constexpr (2 == M) {
     if (1 == like.pos_pos) {
       for (int nz=0; nz<tomo.clustering_Npowerspectra; nz++) {
-        bool OVERSHOOT = false;
+        if constexpr(1 == N)
+        {
+          int N_NonLimber = 1;
+          if (1 == like.adopt_nolimber_gg)
+          {
+            while(N_NonLimber<Nlen[N] && like.ell[N_NonLimber-1]<limits.LMAX_NOLIMBER)
+              N_NonLimber+=1;
+
+            double* ells = (double*)malloc(sizeof(double)*N_NonLimber);
+            for (int i=0;i<N_NonLimber;i++)
+              ells[i] = like.ell[i];
+            
+            double* Cl = (double*)malloc(sizeof(double)*N_NonLimber);
+            C_cl_tomo_nointerp(ells, N_NonLimber, Cl, nz, nz);
+
+            for(int i=0; i<N_NonLimber; i++){
+              const int index = start + Nlen[N]*nz + i;
+              if(survey.get_mask(index))
+                dv(index) = Cl[i];
+            }
+            
+            for(int i=N_NonLimber; i<Nlen[N]; i++)
+            {
+              const int index = start + Nlen[N]*nz + i;
+              if (survey.get_mask(index))
+                dv(index) = C_gg_tomo_limber_nointerp(like.ell[i], nz, nz, 0);
+            }
+            free(Cl);
+            free(ells);
+          }
+          else{
+            for (int i=0; i<Nlen[N]; i++) {
+              const int index = start + Nlen[N]*nz + i;
+              if (survey.get_mask(index)) {
+                dv(index) = C_gg_tomo_limber_nointerp(like.ell[i], nz, nz, 0);
+              }
+            }
+          }
+        }
+        else
+        {
+          for (int i=0; i<Nlen[N]; i++) {
+            const int index = start + Nlen[N]*nz + i;
+            if (survey.get_mask(index))
+              dv(index) = w_gg_tomo(i, nz, nz, (!like.adopt_nolimber_gg));
+          }
+        }
+/*        bool OVERSHOOT = false;
         for (int i=0; i<Nlen[N]; i++) {
           const int index = start + Nlen[N]*nz + i;
           if (survey.get_mask(index)) {
@@ -1031,7 +1078,8 @@ void compute_X_N_masked(arma::Col<double>& dv, const int start)
                 dv(index) = C_gg_tomo_limber_nointerp(like.ell[i], nz, nz, 0);
             }
           }
-        }
+        }*/
+
       }
       add_calib_and_set_mask_X_N<N,M>(dv, start);
     }

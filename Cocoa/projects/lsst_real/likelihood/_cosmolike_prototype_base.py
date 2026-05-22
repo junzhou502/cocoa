@@ -54,6 +54,7 @@ class _cosmolike_prototype_base(DataSetLikelihood):
     ci.initial_setup(
       self.implement_bin_average,
       self.adopt_nolimber_gg,
+      self.lmax_nolimber,
       self.adopt_RSD_gg,
       self.adopt_RSD_gs,
       self.NCell_interpolation,
@@ -61,6 +62,7 @@ class _cosmolike_prototype_base(DataSetLikelihood):
     
     self.log.info(' implement_bin_average = %d ', self.implement_bin_average)
     self.log.info(' adopt_nolimber_gg = %d ', self.adopt_nolimber_gg)
+    self.log.info(' lmax_nolimber = %d ', self.lmax_nolimber)
     self.log.info(' adopt_RSD_gg = %d ', self.adopt_RSD_gg)
     self.log.info(' adopt_RSD_gs = %d ', self.adopt_RSD_gs)
     self.log.info(' NCell_interpolation = %d ', self.NCell_interpolation)

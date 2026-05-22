@@ -33,6 +33,7 @@ double w_gammat_tomo_no_average(const int nt, const int ni, const int nj, const 
 double w_gg_tomo(const int nt, const int ni, const int nj, const int limber);
 double w_gg_tomo_bin_average(const int nt, const int ni, const int nj, const int limber);
 double w_gg_tomo_no_average(const int nt, const int ni, const int nj, const int limber);
+
 double w_gk_tomo(const int nt, const int ni, const int limber);
 
 double w_ks_tomo(const int nt, const int ni, const int limber);
@@ -128,6 +129,7 @@ double int_for_C_yy_limber(double a, void *params);
 
 void C_cl_tomo(int L, int ni, int nj, double *Cl, double dev, double tolerance);
 double C_cl_tomo_2(double L, const int ni, const int nj );
+void C_cl_tomo_nointerp(double* ells, int n_ell, double* Cl, const int ni, const int nj );
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
