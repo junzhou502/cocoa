@@ -87,6 +87,10 @@ typedef struct
   // ---------------------------------------------------
   // ---------------------------------------------------
   int FPTboost;
+  // Up-sampling factor of the TATT FAST-PT table FPTIA (see get_FPT_IA in
+  // pt_cfastpt.c): 1 = off (default); U > 1 resamples it with a cubic spline
+  // onto U times more ln k nodes.
+  int FPTupsample;
   // ---------------------------------------------------
   // ---------------------------------------------------
   // CLUSTER ROUTINES (ALPHA STAGE)

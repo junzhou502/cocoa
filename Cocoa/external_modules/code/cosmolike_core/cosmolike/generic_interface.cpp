@@ -343,6 +343,31 @@ void init_accuracy_boost(
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 
+void init_FPTIA_upsampling(const int factor)
+{ // factor U: the TATT FAST-PT table is resampled onto U times more ln k nodes
+  // with a cubic spline (get_FPT_IA, pt_cfastpt.c). 1 = off, the default.
+  static constexpr std::string_view fname = "init_FPTIA_upsampling"sv;
+  debug("{}: {}", fname, errbegins);
+  if (factor < 1) [[unlikely]] {
+    critical(errorns2, fname, "factor", factor);
+    exit(1);
+  }
+  if (factor != Ntable.FPTupsample) {
+    Ntable.FPTupsample = factor;
+    Ntable.random = RandomNumber::get_instance().get(); // rebuild the tables
+  }
+  debug(debugsel, fname, "Ntable.FPTupsample", factor);
+  debug("{}: {}", fname, errends);
+  return;
+}
+
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+
 void init_baryons_contamination(std::string sim)
 { // OLD API
   static constexpr std::string_view fname = "init_baryons_contamination"sv;

@@ -512,6 +512,10 @@ void init_accuracy_boost(
     const int integration_accuracy
   );
 
+void init_FPTIA_upsampling(
+    const int factor
+  );
+
 void init_baryons_contamination(std::string sim, std::string all_sims_file); // NEW API
 
 void init_baryons_contamination(std::string sim); // OLD API
