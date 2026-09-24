@@ -134,6 +134,8 @@ void reset_cosmology_struct(void)
   cosmology.chi = NULL;
   cosmology.G_nz = 0;
   cosmology.G = NULL;
+  cosmology.G_IA_nz = 0; // 0 = IA terms use G (see growfac_ia)
+  cosmology.G_IA = NULL;
 }
 
 void reset_tomo_struct(void)

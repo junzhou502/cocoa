@@ -166,6 +166,15 @@ typedef struct
   // chi = G[1,j<chi_nz]
   int G_nz;
   double** G;
+  // ---------------------------------------------------
+  // OPTIONAL GROWTH TABLE FOR THE INTRINSIC-ALIGNMENT TERMS ONLY
+  // (growfac_ia in cosmo3D.c, filled by set_growth_ia). Same layout as G.
+  // G_IA_nz = 0 (default) means "not set": the IA terms then use G, bitwise
+  // as before. It exists because G also feeds the non-Limber w(theta) (D and
+  // f in C_cl_tomo) and the Limber RSD f, so the IA growth cannot be changed
+  // through G without moving galaxy clustering too.
+  int G_IA_nz;
+  double** G_IA;
 } cosmopara;
 
 typedef struct

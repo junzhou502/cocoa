@@ -898,7 +898,7 @@ double int_for_C_ss_tomo_limber(double a, void* params)
 
   const double ell = l + 0.5;
   struct chis chidchi = chi_all(a);
-  const double growfac_a = growfac(a);
+  const double growfac_a = growfac_ia(a); // used only by the IA terms below
   const double hoverh0 = hoverh0v2(a, chidchi.dchida);
   const double fK = f_K(chidchi.chi); // (Mpc/h)/(c/H0=100) (dimensionless)
   const double k = ell/fK; // (c/H0)/(Mpc/h)
@@ -1158,6 +1158,11 @@ double int_for_C_gs_tomo_limber(double a, void* params)
   struct chis chidchi = chi_all(a);
   const double hoverh0 = hoverh0v2(a, chidchi.dchida);
   const double g4 = growfac_a*growfac_a*growfac_a*growfac_a;
+  // Intrinsic-alignment terms use their own growth (growfac_ia; identical to
+  // growfac unless set_growth_ia was called); the one-loop galaxy-bias term
+  // keeps growfac.
+  const double growfac_ia_a = growfac_ia(a);
+  const double g4_ia = growfac_ia_a*growfac_ia_a*growfac_ia_a*growfac_ia_a;
   const double ell = l + 0.5;
   const double fK = f_K(chidchi.chi);
   const double k = ell/fK;
@@ -1196,16 +1201,16 @@ double int_for_C_gs_tomo_limber(double a, void* params)
       lim[2] = (lim[1] - lim[0])/FPTIA.N;
 
       const double mixA = (lnk<lim[0] || lnk>lim[1]) ? 0.0 : 
-        g4*interpol1d(FPTIA.tab[6], FPTIA.N, lim[0], lim[1], lim[2], lnk);
+        g4_ia*interpol1d(FPTIA.tab[6], FPTIA.N, lim[0], lim[1], lim[2], lnk);
       
       const double mixB = (lnk<lim[0] || lnk>lim[1]) ? 0.0 :
-        g4*interpol1d(FPTIA.tab[7], FPTIA.N, lim[0], lim[1], lim[2], lnk);
+        g4_ia*interpol1d(FPTIA.tab[7], FPTIA.N, lim[0], lim[1], lim[2], lnk);
       
       const double ta_dE1 = (lnk<lim[0] || lnk>lim[1]) ? 0.0 :
-        g4*interpol1d(FPTIA.tab[2], FPTIA.N, lim[0], lim[1], lim[2], lnk);
+        g4_ia*interpol1d(FPTIA.tab[2], FPTIA.N, lim[0], lim[1], lim[2], lnk);
       
       const double ta_dE2 = (lnk<lim[0] || lnk>lim[1]) ? 0.0 :
-        g4*interpol1d(FPTIA.tab[3], FPTIA.N, lim[0], lim[1], lim[2], lnk);
+        g4_ia*interpol1d(FPTIA.tab[3], FPTIA.N, lim[0], lim[1], lim[2], lnk);
 
       double WRSD = 0.0;
       if (include_RSD_GS == 1)
@@ -1241,9 +1246,9 @@ double int_for_C_gs_tomo_limber(double a, void* params)
         oneloop = 0.5*g4*(b2 * d1d2 + bs2 * d1s2 + b3 * d1d3);
       }
 
-      const double C1ZS  = IA_A1_Z1(a, growfac_a, ns);
-      const double btazs = IA_BTA_Z1(a, growfac_a, ns);
-      const double C2ZS  = IA_A2_Z1(a, growfac_a, ns);
+      const double C1ZS  = IA_A1_Z1(a, growfac_ia_a, ns);
+      const double btazs = IA_BTA_Z1(a, growfac_ia_a, ns);
+      const double C2ZS  = IA_A2_Z1(a, growfac_ia_a, ns);
 
       // TODO: IS THIS CONSISTENT (WRSD, ONELOOP AND IA CROSS TERMS)?
       ans =  WK*((WGAL*b1+WMAG*ell_prefactor*bmag+WRSD)*PK+WGAL*oneloop) 
@@ -1296,7 +1301,7 @@ double int_for_C_gs_tomo_limber(double a, void* params)
         oneloop = 0.5*g4*(b2*d1d2 + bs2*d1s2 + b3*d1d3);
       }
       
-      const double C1ZS = IA_A1_Z1(a, growfac_a, ns);
+      const double C1ZS = IA_A1_Z1(a, growfac_ia_a, ns);
 
       ans = (WK-WS*C1ZS)*((WGAL*b1+WMAG*ell_prefactor*bmag+WRSD)*PK+WGAL*oneloop);
       break;
@@ -1919,7 +1924,7 @@ double int_for_C_ks_tomo_limber(double a, void* params)
   }
   const double l = ar[1];  
   const double ell = l + 0.5;  
-  const double growfac_a = growfac(a);
+  const double growfac_a = growfac_ia(a); // used only by the IA term below
   struct chis chidchi = chi_all(a);
   const double hoverh0 = hoverh0v2(a, chidchi.dchida);
   const double fK = f_K(chidchi.chi);
@@ -2316,7 +2321,7 @@ double int_for_C_ys_tomo_limber(double a, void* params)
   const double l = ar[1];
   
   const double ell = l + 0.5;
-  const double growfac_a = growfac(a);
+  const double growfac_a = growfac_ia(a); // used only by the IA term below
   struct chis chidchi = chi_all(a);
   const double hoverh0 = hoverh0v2(a, chidchi.dchida);
   const double fK = f_K(chidchi.chi);

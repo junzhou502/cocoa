@@ -1050,6 +1050,58 @@ void set_growth(vector io_z, vector io_G)
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 
+void set_growth_ia(vector io_z, vector io_G)
+{ // Growth used ONLY by the intrinsic-alignment terms (growfac_ia): D = G * a.
+  // Optional. Until it is called the IA terms use the table of set_growth, so
+  // nothing changes for callers that never use it. Call it after set_growth on
+  // every cosmology change (a changed table refreshes cosmology.random, which
+  // invalidates the cached C_ell tables).
+  static constexpr std::string_view fname = "set_growth_ia"sv;
+  debug("{}: {}", fname, errbegins);
+  if (io_z.n_elem != io_G.n_elem) [[unlikely]] {
+    critical(errorsz1d, fname, erriiwz, io_z.n_elem, io_G.n_elem); exit(1);
+  }
+  if (io_z.n_elem < 2) [[unlikely]] {
+    critical("{}: need at least 2 redshifts, got {}", fname, io_z.n_elem); exit(1);
+  }
+
+  int cache_update = 0;
+  if (cosmology.G_IA_nz != static_cast<int>(io_z.n_elem) || NULL == cosmology.G_IA) {
+    cache_update = 1;
+  }
+  else {
+    for (int i=0; i<cosmology.G_IA_nz; i++) {
+      if (fdiff(cosmology.G_IA[0][i], io_z(i)) || fdiff(cosmology.G_IA[1][i], io_G(i))) {
+        cache_update = 1;
+        break;
+      }
+    }
+  }
+  if (1 == cache_update || 1 == force_cache_update_test)
+  {
+    cosmology.G_IA_nz = static_cast<int>(io_z.n_elem);
+    if (cosmology.G_IA != NULL) { free(cosmology.G_IA); }
+    cosmology.G_IA = (double**) malloc2d(2, cosmology.G_IA_nz);
+    #pragma omp parallel for
+    for (int i=0; i<cosmology.G_IA_nz; i++) {
+      if (std::isnan(io_z(i)) || std::isnan(io_G(i))) [[unlikely]] {
+        critical("{}: {}", fname, errnanit); exit(1);
+      }
+      cosmology.G_IA[0][i] = io_z(i);
+      cosmology.G_IA[1][i] = io_G(i);
+    }
+    cosmology.random = RandomNumber::get_instance().get();
+  }
+  debug("{}: {}", fname, errends);
+}
+
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+
 void set_linear_power_spectrum(vector io_log10k, vector io_z, vector io_lnP)
 {
   static constexpr std::string_view fname = "set_linear_power_spectrum"sv;

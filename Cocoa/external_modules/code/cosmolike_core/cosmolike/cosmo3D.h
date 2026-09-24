@@ -27,6 +27,11 @@ double f_growth(const double z);
 
 double growfac(const double a);
 
+// Growth D(a)/D(a=1) for the intrinsic-alignment terms only: interpolates the
+// optional table cosmology.G_IA (set_growth_ia) and returns growfac(a) when
+// that table is not set.
+double growfac_ia(const double a);
+
 // ----------------------------------------------------------------------
 // ----------------------------------------------------------------------
 

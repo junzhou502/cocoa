@@ -599,7 +599,13 @@ void set_distances(
   );
 
 void set_growth(
-    arma::Col<double> io_z, 
+    arma::Col<double> io_z,
+    arma::Col<double> io_G
+  );
+
+// Optional growth table for the intrinsic-alignment terms only (growfac_ia).
+void set_growth_ia(
+    arma::Col<double> io_z,
     arma::Col<double> io_G
   );
 

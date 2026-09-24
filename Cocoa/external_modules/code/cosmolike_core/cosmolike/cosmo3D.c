@@ -197,6 +197,64 @@ double norm_growfac(const double a, const bool normalize_z0)
     return G*a; // Growth D = G * a
 }
 
+double growfac_ia(const double a)
+{ // Growth D = G_IA * a, normalised to 1 at z = 0, for the intrinsic-alignment
+  // terms only. A separate table is needed because cosmology.G also feeds the
+  // non-Limber w(theta) (D and f in C_cl_tomo) and the Limber RSD f: the
+  // CosmoSIS TATT module measures the IA growth at a different k than its
+  // exact w(theta) projection does. Without a G_IA table this returns
+  // growfac(a) itself, so the default path is bitwise unchanged. Same
+  // bracketing and linear interpolation in z as norm_growfac.
+  if (0 == cosmology.G_IA_nz || NULL == cosmology.G_IA) {
+    return growfac(a);
+  }
+  double growfact1;
+  {
+    const double z = 0.0;
+    int j = 0;
+    {
+      size_t ilo = 0;
+      size_t ihi = cosmology.G_IA_nz-1;
+      while (ihi>ilo+1) {
+        size_t ll = (ihi+ilo)/2;
+        if(cosmology.G_IA[0][ll]>z)
+          ihi = ll;
+        else
+          ilo = ll;
+      }
+      j = ilo;
+    }
+    const double dy = (z                      - cosmology.G_IA[0][j])/
+                      (cosmology.G_IA[0][j+1] - cosmology.G_IA[0][j]);
+
+    growfact1 = cosmology.G_IA[1][j] + dy*(cosmology.G_IA[1][j+1] - cosmology.G_IA[1][j]);
+  }
+
+  const double z = 1.0/a-1.0;
+
+  int j = 0;
+  {
+    size_t ilo = 0;
+    size_t ihi = cosmology.G_IA_nz-1;
+    while (ihi>ilo+1)
+    {
+      size_t ll = (ihi+ilo)/2;
+      if(cosmology.G_IA[0][ll]>z)
+        ihi = ll;
+      else
+        ilo = ll;
+    }
+    j = ilo;
+  }
+
+  const double dy = (z                      - cosmology.G_IA[0][j])/
+                    (cosmology.G_IA[0][j+1] - cosmology.G_IA[0][j]);
+
+  const double G = cosmology.G_IA[1][j] + dy*(cosmology.G_IA[1][j+1] - cosmology.G_IA[1][j]);
+
+  return (G*a)/growfact1; // Growth D = G * a
+}
+
 double f_growth(const double z)
 {
   int j = 0;
