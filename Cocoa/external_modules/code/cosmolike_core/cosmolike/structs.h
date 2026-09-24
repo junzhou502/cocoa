@@ -300,6 +300,17 @@ typedef struct
   int clusterCC;
   int adopt_limber_gg;
   int use_ggl_efficiency_zoverlap;
+  // POINT-MASS KERNEL SELECTION (gamma_t point-mass marginalization term)
+  //   0 = default. Historical CosmoLike/y3_production kernel: the lens
+  //       efficiency and the comoving distance are evaluated at the single
+  //       effective lens redshift zmean(zl), and the radial factor carries
+  //       1/(chi_l * a_l^3). The term is added BEFORE the (1+m) shear
+  //       calibration, so it is multiplied by (1+m).
+  //   1 = CosmoSIS-matched. The kernel is integrated over the lens n(z),
+  //       the radial factor is (1+z_l)/chi_l, and the term is added AFTER
+  //       the (1+m) shear calibration, so it carries no (1+m).
+  //       See PointMass::get_pm in generic_interface.cpp.
+  int point_mass_model;
   // ---------------------------------------------------
   // ---------------------------------------------------
   // HALO MODEL CHOICES

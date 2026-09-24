@@ -554,6 +554,10 @@ void init_IA(
     const int IA_REDSHIFT_EVOL
   );
 
+void init_point_mass_model(
+    const int point_mass_model
+  );
+
 void init_probes(
     std::string possible_probes
   );
@@ -818,6 +822,15 @@ void add_calib_and_set_mask_X_N(arma::Col<double>& dv, const int start)
             if constexpr (0 == N && 1 == P) {
               vector theta = compute_binning_real_space();
               const int zl = ZL(nz);
+              if (1 == like.point_mass_model) {
+                // CosmoSIS runs shear_m_bias BEFORE add_gammat_point_mass, so
+                // its point-mass term carries no (1+m) factor. Calibrate the
+                // theory gamma_t first, then add the point mass, and skip to
+                // the next theta bin so the default multiply is not reapplied.
+                dv(index) *= (1.0+nuisance.shear_calibration_m[zs]);
+                dv(index) += PointMass::get_instance().get_pm(zl,zs,theta(i));
+                continue;
+              }
               dv(index) += PointMass::get_instance().get_pm(zl,zs,theta(i));
             }
             dv(index) *= (1.0+nuisance.shear_calibration_m[zs]);

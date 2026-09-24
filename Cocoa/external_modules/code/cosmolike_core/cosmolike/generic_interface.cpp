@@ -612,6 +612,27 @@ void init_IA(const int IA_MODEL, const int IA_REDSHIFT_EVOL)
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 
+void init_point_mass_model(const int point_mass_model)
+{ // selects the gamma_t point-mass kernel, see PointMass::get_pm
+  static constexpr std::string_view fname = "init_point_mass_model"sv;
+  debug("{}: {}", fname, errbegins);
+  if (0 != point_mass_model && 1 != point_mass_model) [[unlikely]] {
+    critical(errorns2, fname, "point_mass_model", point_mass_model);
+    exit(1);
+  }
+  like.point_mass_model = point_mass_model;
+  debug(debugsel, fname, "like.point_mass_model", point_mass_model);
+  debug("{}: {}", fname, errends);
+  return;
+}
+
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+
 void init_probes(std::string possible_probes)
 {
   static constexpr std::string_view fname = "init_probes"sv;
@@ -2384,6 +2405,143 @@ void IPCMB::set_kk_binning_bandpower (
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// CosmoSIS-matched point-mass kernel (like.point_mass_model = 1)
+// ---------------------------------------------------------------------------
+// Returns
+//
+//   beta(zl,zs) = < (1 + z_l) * g_s(z_l) / chi(z_l) >_{n_l}
+//
+//               = [ Int dz_l n_l(z_l) (1+z_l) g_s(z_l)/chi(z_l) ]
+//                 / [ Int dz_l n_l(z_l) ]
+//
+// with  g_s(z_l) = Int_{z_l}^{inf} dz_s n_s(z_s) (chi_s - chi_l)/chi_s
+//                = g_tomo(1/(1+z_l), zs),
+//
+// which is exactly the "betaj1j2_pm" of the CosmoSIS module
+// shear/point_mass/add_gammat_point_mass.py (coeff_ints factored out; it is
+// reinstated as 4*pi*G/c^2 by the caller).  chi is in c/H0 units here and in
+// Mpc/h there; the ratio (chi_s-chi_l)/chi_s is dimensionless and the leading
+// 1/chi_l is undone by Goverc2 being expressed in (c/H0)/(Msun/h), so the two
+// expressions agree numerically.
+//
+// Differences from the like.point_mass_model = 0 kernel, all deliberate:
+//   (a) the lens-redshift dependence is integrated over n_l(z_l) instead of
+//       being evaluated at the single effective redshift zmean(zl).  Because
+//       g_s(z_l) is strongly nonlinear in z_l, this is source-bin dependent
+//       and cannot be absorbed into a constant rescaling of the amplitude;
+//   (b) the radial factor is (1+z_l)/chi_l, not 1/(chi_l a_l^3) =
+//       (1+z_l)^3/chi_l.  The two extra powers of (1+z) in the default path
+//       are the documented "alens^2 ... to be consistent with y3_production";
+//   (c) the caller (add_calib_and_set_mask_X_N in generic_interface.hpp)
+//       applies the (1+m) shear calibration BEFORE adding this term, matching
+//       the CosmoSIS module order shear_m_bias -> add_point_mass.
+//
+// CAVEAT: CosmoSIS evaluates chi(z) on a FIXED fiducial flat matter+Lambda
+// background (Om = 0.3, H0 = 69) when use_fiducial = True.  This routine uses
+// the live sampled cosmology, which is CosmoLike's natural behaviour.  The two
+// coincide only at the fiducial cosmology; an exact match while sampling
+// Omega_m additionally requires CosmoSIS use_fiducial = False.
+double pm_beta_lens_averaged(const int zl, const int zs)
+{
+  static constexpr std::string_view fname = "pm_beta_lens_averaged"sv;
+
+  static double cache_cosmo_params;
+  static double cache_table_params;
+  static double cache_photoz_nuisance_params_shear;
+  static double cache_photoz_nuisance_params_clustering;
+  static double cache_redshift_nz_params_shear;
+  static double cache_redshift_nz_params_clustering;
+  static double table[MAX_SIZE_ARRAYS][MAX_SIZE_ARRAYS];
+  static int is_table_set = 0;
+
+  if (zl < 0 || zl > redshift.clustering_nbin - 1) [[unlikely]] {
+    critical(errorns, fname, "zl", zl, redshift.clustering_nbin);
+    exit(1);
+  }
+  if (zs < 0 || zs > redshift.shear_nbin - 1) [[unlikely]] {
+    critical(errorns, fname, "zs", zs, redshift.shear_nbin);
+    exit(1);
+  }
+
+  if (0 == is_table_set ||
+      fdiff(cache_cosmo_params, cosmology.random) ||
+      fdiff(cache_table_params, Ntable.random) ||
+      fdiff(cache_photoz_nuisance_params_shear, nuisance.random_photoz_shear) ||
+      fdiff(cache_photoz_nuisance_params_clustering,
+            nuisance.random_photoz_clustering) ||
+      fdiff(cache_redshift_nz_params_shear, redshift.random_shear) ||
+      fdiff(cache_redshift_nz_params_clustering, redshift.random_clustering))
+  {
+    // Gauss-Legendre on the support of the shifted/stretched lens n(z).  The
+    // limits follow the amin_lens/amax_lens convention in redshift_spline.c.
+    const size_t szint = 500 + 100*((size_t) Ntable.high_def_integration);
+    gsl_integration_glfixed_table* w = malloc_gslint_glfixed((int) szint);
+
+    for (int i=0; i<redshift.clustering_nbin; i++)
+    {
+      const double zme = redshift.clustering_zdist_zmean[i];
+      const double str = nuisance.photoz[1][1][i];
+      const double shf = std::fabs(nuisance.photoz[1][0][i]);
+      const double zlo = fmax((redshift.clustering_zdist_zmin[i]-zme)*str + zme
+                              - 2.0*shf, 1.e-3);
+      const double zhi = (redshift.clustering_zdist_zmax[i]-zme)*str + zme
+                              + 2.0*shf;
+      if (!(zhi > zlo)) [[unlikely]] {
+        critical("{}: empty lens n(z) support on bin {}", fname, i);
+        exit(1);
+      }
+
+      double den = 0.0;
+      double num[MAX_SIZE_ARRAYS];
+      for (int j=0; j<redshift.shear_nbin; j++) {
+        num[j] = 0.0;
+      }
+
+      for (size_t k=0; k<szint; k++)
+      {
+        double zi, wi;
+        gsl_integration_glfixed_point(zlo, zhi, k, &zi, &wi, w);
+
+        const double nz = pf_photoz(zi, i);
+        if (!(nz > 0.0)) {
+          continue;              // outside the (shifted/stretched) support
+        }
+        const double a = 1.0/(1.0 + zi);
+        const double chi_l = chi(a);
+        if (!(chi_l > 0.0)) [[unlikely]] {
+          continue;              // z -> 0; the integrand vanishes there
+        }
+        den += wi*nz;
+        const double radial = wi*nz*(1.0 + zi)/chi_l;
+        for (int j=0; j<redshift.shear_nbin; j++) {
+          num[j] += radial*g_tomo(a, j);
+        }
+      }
+
+      if (!(den > 0.0)) [[unlikely]] {
+        critical("{}: lens n(z) normalization is zero on bin {}", fname, i);
+        exit(1);
+      }
+      for (int j=0; j<redshift.shear_nbin; j++) {
+        table[i][j] = num[j]/den;
+        debug("{}: beta[zl={}][zs={}] = {} (norm = {})", fname, i, j,
+              table[i][j], den);
+      }
+    }
+
+    gsl_integration_glfixed_table_free(w);
+    cache_cosmo_params = cosmology.random;
+    cache_table_params = Ntable.random;
+    cache_photoz_nuisance_params_shear = nuisance.random_photoz_shear;
+    cache_photoz_nuisance_params_clustering = nuisance.random_photoz_clustering;
+    cache_redshift_nz_params_shear = redshift.random_shear;
+    cache_redshift_nz_params_clustering = redshift.random_clustering;
+    is_table_set = 1;
+  }
+  return table[zl][zs];
+}
+
 double PointMass::get_pm(
     const int zl, 
     const int zs, 
@@ -2393,6 +2551,15 @@ double PointMass::get_pm(
   static constexpr std::string_view fname = "PointMass::get_pm"sv;
   debug("{}: {}", fname, errbegins);
   constexpr double Goverc2 = 1.6e-23;
+
+  if (1 == like.point_mass_model) 
+  { // CosmoSIS-matched kernel; see pm_beta_lens_averaged above.  The (1+m)
+    // shear calibration is applied by the caller BEFORE this term is added.
+    const double beta = pm_beta_lens_averaged(zl, zs);
+    debug("{}: {}", fname, errends);
+    return 4*M_PI*Goverc2*this->pm_[zl]*1.e+13*beta/(theta*theta);
+  }
+
   const double a_lens = 1.0/(1.0 + zmean(zl));
   const double chi_lens = chi(a_lens);
   debug("{}: {}", fname, errends);

@@ -107,6 +107,7 @@ void reset_like_struct(void)
   like.ky = 0;
   like.yy = 0;
   like.adopt_limber_gg = 0;
+  like.point_mass_model = 0; // 0 = historical y3_production point-mass kernel
 }
 
 void reset_cosmology_struct(void)
