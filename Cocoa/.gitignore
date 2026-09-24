@@ -102,7 +102,8 @@ external_modules/code/FAST-PT*
 external_modules/code/PyFAST-PT*
 external_modules/code/cfastpt
 external_modules/code/cfftlog
-external_modules/code/cosmolike*
+external_modules/code/cosmolike
+# cosmolike_core is tracked inside this repo (Project Projection Effect)
 external_modules/code/log.c
 external_modules/code/planck/code/spt_clik/.lock-waf_*
 external_modules/code/planck/code/spt_clik/.waf*
