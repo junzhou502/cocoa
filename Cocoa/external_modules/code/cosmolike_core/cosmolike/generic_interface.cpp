@@ -2550,22 +2550,36 @@ double PointMass::get_pm(
 { // JX: add alens^2 in the den to be consistent with y3_production
   static constexpr std::string_view fname = "PointMass::get_pm"sv;
   debug("{}: {}", fname, errbegins);
-  constexpr double Goverc2 = 1.6e-23;
 
-  if (1 == like.point_mass_model) 
+  // G/c^2 in the code's units, (c/H0) / (Msun/h).
+  //
+  // Goverc2_legacy is the historical rounded value.  In Mpc/Msun it is
+  // 4.796679e-20 against an exact 4.785415842e-20, i.e. +0.235371%, and that
+  // is the entire residual between the matched kernel and CosmoSIS (which
+  // takes G and c from astropy.constants).  It is kept EXACTLY as it was on
+  // the default path: like.point_mass_model = 0 is shared with the installed
+  // roman_fourier and roman_real projects and must stay bitwise reproducible.
+  //
+  // Goverc2_exact = (G/c^2 = 4.785415842e-20 Mpc/Msun) / (c/H0 = 2997.92458
+  // Mpc/h), from CODATA 2018 G, c, Mpc and Msun.  Used only on the
+  // CosmoSIS-matched path, whose whole purpose is to agree with CosmoSIS.
+  constexpr double Goverc2_legacy = 1.6e-23;
+  constexpr double Goverc2_exact  = 1.596242905e-23;
+
+  if (1 == like.point_mass_model)
   { // CosmoSIS-matched kernel; see pm_beta_lens_averaged above.  The (1+m)
     // shear calibration is applied by the caller BEFORE this term is added.
     const double beta = pm_beta_lens_averaged(zl, zs);
     debug("{}: {}", fname, errends);
-    return 4*M_PI*Goverc2*this->pm_[zl]*1.e+13*beta/(theta*theta);
+    return 4*M_PI*Goverc2_exact*this->pm_[zl]*1.e+13*beta/(theta*theta);
   }
 
   const double a_lens = 1.0/(1.0 + zmean(zl));
   const double chi_lens = chi(a_lens);
   debug("{}: {}", fname, errends);
-  return 4*M_PI*Goverc2*this->pm_[zl]*1.e+13*
+  return 4*M_PI*Goverc2_legacy*this->pm_[zl]*1.e+13*
     g_tomo(a_lens, zs)/(theta*theta)/(chi_lens*a_lens*a_lens*a_lens);
-  
+
 }
 
 // ---------------------------------------------------------------------------
