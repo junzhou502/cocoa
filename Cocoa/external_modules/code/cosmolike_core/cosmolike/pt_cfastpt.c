@@ -165,7 +165,20 @@ void get_FPT_IA(void)
 
   if (fdiff(cache[1], Ntable.random))
   {
-    FPTIA.k_min = 1.e-5;
+    // k_min is an option (init_FPTIA_kmin; default 1e-5 c/H0 = 3.3e-9 h/Mpc).
+    // Upstream CosmoLike (core v4.11.7) starts at 0.05 c/H0 = 1.7e-5 h/Mpc.
+    // The Limber lookups of this table never go below k = (l + 1/2)/chi with
+    // l = 1 and chi(z = 3) for the DES Y3 sources: k > 1.0 c/H0 at Omega_m 0.3,
+    // > 0.66 c/H0 even at Omega_m 0.05, so either value covers them; a lookup
+    // below k_min would give zero (cosmo2D.c). The 11 decades from 1e-5 amplify
+    // rounding in cFASTPT's FFT-based TATT terms. Measured on DES Y3 MagLim
+    // (des_y3 ppe/cfastpt_kmin_test, A1 = 5, A2 = -5, alpha = -5, bias_ta = 2,
+    // Omega_m 0.3, nested grids, 1100 fixed nodes, CAMB kmax fixed):
+    //   k_min 1e-5: turning FMA contraction off moves the vector by chi2 70-80,
+    //               and the accuracyboost steps do not converge;
+    //   k_min 0.05: turning FMA contraction off moves it by 1e-5, and the steps
+    //               fall 4x in amplitude per doubling, to chi2 7e-5 at 4 -> 8.
+    FPTIA.k_min = (Ntable.FPTkmin > 0) ? Ntable.FPTkmin : 1.e-5;
     FPTIA.k_max = 1.e+6;
     // The base node count is an option (init_FPTIA_base_nodes; default 270).
     // Upstream CosmoLike (core v4.11.7) uses 1100: 24.6 nodes per decade in k
@@ -176,9 +189,10 @@ void get_FPT_IA(void)
     // the nodes lnk_min + i*(lnk_max - lnk_min)/N exclude k_max, so the nodes
     // of N = base*m contain those of base*m/2, and a boost only adds nodes.
     // Measured on DES Y3 MagLim (des_y3 ppe/desy3_nested_grids): neither option
-    // makes the TATT vector converge in accuracyboost. Even with the nodes held
-    // fixed, a tiny change of the input P_lin, or compiling with FMA contraction
-    // off, moves cFASTPT's output by as much as one accuracyboost step.
+    // makes the TATT vector converge in accuracyboost at k_min = 1e-5: even with
+    // the nodes held fixed, a tiny change of the input P_lin, or compiling with
+    // FMA contraction off, moves cFASTPT's output by as much as one accuracyboost
+    // step (k_min = 0.05 removes this, see above).
     const int base = (Ntable.FPTbase > 0 ? Ntable.FPTbase : 270);
     Nraw        = (Ntable.FPTnest > 0) ? base * Ntable.FPTnest : base + 200 * Ntable.FPTboost;
     FPTIA.N     = (Ntable.FPTupsample > 1 ? Ntable.FPTupsample : 1) * Nraw;

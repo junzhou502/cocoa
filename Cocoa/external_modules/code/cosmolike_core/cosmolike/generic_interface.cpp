@@ -418,6 +418,31 @@ void init_FPTIA_nested_nodes(const int m)
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 
+void init_FPTIA_kmin(const double kmin)
+{ // lower end in k (c/H0 units) of the TATT FAST-PT table (get_FPT_IA,
+  // pt_cfastpt.c). 1e-5 = default; upstream CosmoLike v4.11.7 uses 0.05.
+  static constexpr std::string_view fname = "init_FPTIA_kmin"sv;
+  debug("{}: {}", fname, errbegins);
+  if (!(kmin > 0.0) || !(kmin < 1.e+5)) [[unlikely]] {
+    critical(errorns2, fname, "kmin", kmin);
+    exit(1);
+  }
+  if (fdiff(kmin, Ntable.FPTkmin)) {
+    Ntable.FPTkmin = kmin;
+    Ntable.random = RandomNumber::get_instance().get(); // rebuild the tables
+  }
+  debug(debugsel, fname, "Ntable.FPTkmin", kmin);
+  debug("{}: {}", fname, errends);
+  return;
+}
+
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+
 void init_baryons_contamination(std::string sim)
 { // OLD API
   static constexpr std::string_view fname = "init_baryons_contamination"sv;

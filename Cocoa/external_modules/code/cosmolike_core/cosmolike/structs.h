@@ -97,6 +97,8 @@ typedef struct
   // Nested node rule: FPTnest = m > 0 makes FPTIA.N = FPTbase*m instead
   // (m = 2^ceil(log2(accuracyboost)), set by the likelihood). 0 = default.
   int FPTnest;
+  // Lower end of that table in k (c/H0 units): 1e-5 = default.
+  double FPTkmin;
   // ---------------------------------------------------
   // ---------------------------------------------------
   // CLUSTER ROUTINES (ALPHA STAGE)

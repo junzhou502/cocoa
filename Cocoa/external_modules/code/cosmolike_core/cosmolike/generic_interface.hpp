@@ -524,6 +524,10 @@ void init_FPTIA_nested_nodes(
     const int m
   );
 
+void init_FPTIA_kmin(
+    const double kmin
+  );
+
 void init_baryons_contamination(std::string sim, std::string all_sims_file); // NEW API
 
 void init_baryons_contamination(std::string sim); // OLD API

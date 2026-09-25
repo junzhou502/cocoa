@@ -272,6 +272,7 @@ void reset_Ntable_struct(void)
   Ntable.FPTupsample=1;
   Ntable.FPTbase=270;
   Ntable.FPTnest=0;
+  Ntable.FPTkmin=1.e-5;
 }
 
 /*
