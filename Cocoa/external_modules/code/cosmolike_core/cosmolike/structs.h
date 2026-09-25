@@ -91,6 +91,12 @@ typedef struct
   // pt_cfastpt.c): 1 = off (default); U > 1 resamples it with a cubic spline
   // onto U times more ln k nodes.
   int FPTupsample;
+  // Base node count of that table: FPTIA.N = FPTbase + 200*FPTboost (see
+  // get_FPT_IA). 270 = default.
+  int FPTbase;
+  // Nested node rule: FPTnest = m > 0 makes FPTIA.N = FPTbase*m instead
+  // (m = 2^ceil(log2(accuracyboost)), set by the likelihood). 0 = default.
+  int FPTnest;
   // ---------------------------------------------------
   // ---------------------------------------------------
   // CLUSTER ROUTINES (ALPHA STAGE)

@@ -368,6 +368,56 @@ void init_FPTIA_upsampling(const int factor)
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 
+void init_FPTIA_base_nodes(const int nodes)
+{ // base node count of the TATT FAST-PT table: FPTIA.N = nodes + 200*FPTboost
+  // (get_FPT_IA, pt_cfastpt.c). 270 = default.
+  static constexpr std::string_view fname = "init_FPTIA_base_nodes"sv;
+  debug("{}: {}", fname, errbegins);
+  if (nodes < 16) [[unlikely]] {
+    critical(errorns2, fname, "nodes", nodes);
+    exit(1);
+  }
+  if (nodes != Ntable.FPTbase) {
+    Ntable.FPTbase = nodes;
+    Ntable.random = RandomNumber::get_instance().get(); // rebuild the tables
+  }
+  debug(debugsel, fname, "Ntable.FPTbase", nodes);
+  debug("{}: {}", fname, errends);
+  return;
+}
+
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+
+void init_FPTIA_nested_nodes(const int m)
+{ // m > 0: the TATT FAST-PT table gets FPTIA.N = base*m nodes, a nested
+  // refinement (get_FPT_IA, pt_cfastpt.c); m = 0 (default): base + 200*FPTboost.
+  static constexpr std::string_view fname = "init_FPTIA_nested_nodes"sv;
+  debug("{}: {}", fname, errbegins);
+  if (m < 0 || m > 64) [[unlikely]] {
+    critical(errorns2, fname, "m", m);
+    exit(1);
+  }
+  if (m != Ntable.FPTnest) {
+    Ntable.FPTnest = m;
+    Ntable.random = RandomNumber::get_instance().get(); // rebuild the tables
+  }
+  debug(debugsel, fname, "Ntable.FPTnest", m);
+  debug("{}: {}", fname, errends);
+  return;
+}
+
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+
 void init_baryons_contamination(std::string sim)
 { // OLD API
   static constexpr std::string_view fname = "init_baryons_contamination"sv;

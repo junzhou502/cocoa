@@ -167,7 +167,20 @@ void get_FPT_IA(void)
   {
     FPTIA.k_min = 1.e-5;
     FPTIA.k_max = 1.e+6;
-    Nraw        = 270 + 200 * Ntable.FPTboost;
+    // The base node count is an option (init_FPTIA_base_nodes; default 270).
+    // Upstream CosmoLike (core v4.11.7) uses 1100: 24.6 nodes per decade in k
+    // become 100 per decade, so FAST-PT samples P_lin and its own output more
+    // finely before any interpolation.
+    // Additive growth (+200 per boost) moves every node at every boost. With
+    // the nested rule (init_FPTIA_nested_nodes, m > 0) the count is base*m:
+    // the nodes lnk_min + i*(lnk_max - lnk_min)/N exclude k_max, so the nodes
+    // of N = base*m contain those of base*m/2, and a boost only adds nodes.
+    // Measured on DES Y3 MagLim (des_y3 ppe/desy3_nested_grids): neither option
+    // makes the TATT vector converge in accuracyboost. Even with the nodes held
+    // fixed, a tiny change of the input P_lin, or compiling with FMA contraction
+    // off, moves cFASTPT's output by as much as one accuracyboost step.
+    const int base = (Ntable.FPTbase > 0 ? Ntable.FPTbase : 270);
+    Nraw        = (Ntable.FPTnest > 0) ? base * Ntable.FPTnest : base + 200 * Ntable.FPTboost;
     FPTIA.N     = (Ntable.FPTupsample > 1 ? Ntable.FPTupsample : 1) * Nraw;
 
     if (FPTIA.tab != NULL) {

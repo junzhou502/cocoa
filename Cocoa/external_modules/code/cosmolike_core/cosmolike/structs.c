@@ -270,6 +270,8 @@ void reset_Ntable_struct(void)
   Ntable.high_def_integration = 0;
   Ntable.FPTboost=0;
   Ntable.FPTupsample=1;
+  Ntable.FPTbase=270;
+  Ntable.FPTnest=0;
 }
 
 /*
