@@ -712,6 +712,57 @@ void init_IA(const int IA_MODEL, const int IA_REDSHIFT_EVOL)
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 
+// C1 * rho_crit, the TATT normalisation, in units of h^-2. Every TATT
+// amplitude (IA_A1_Z1Z2 and IA_A2_Z1Z2 in IA.c) is multiplied by
+// cosmology.Omega_m * nuisance.c1rhocrit_ia, so this constant scales the
+// GI terms linearly and the II terms quadratically.
+//
+// LEGACY_C1RHOCRIT_IA is the value CosmoLike has always hard-coded. CosmoSIS
+// computes the same quantity in
+// intrinsic_alignments/tatt/tatt_interface.py::compute_c1_baseline() from
+//   C1 = 5e-14 h^-2 Msun^-1 Mpc^3, M_sun = 1.9891e30 kg, Mpc = 3.0857e22 m,
+//   G = 6.67384e-11 m^3 kg^-1 s^-2, H = 100 h km/s/Mpc
+// and gets 0.013873073650776856, so the legacy CosmoLike value is +0.1220%
+// high.
+//
+// The value is held here, not in reset_nuisance_struct, because
+// set_nuisance_IA reassigns nuisance.c1rhocrit_ia on every call. The default
+// is the legacy constant, so a run that never calls init_ia_c1rhocrit is
+// bitwise identical to the historical behaviour (the shared core also serves
+// other projects, which must not move). Ported from the legacy tree's core
+// commit 97435a7 (2026-09-19); here init_ia_c1rhocrit also refreshes
+// nuisance.random_ia when the value changes, so that C(l) tables cached on
+// the IA parameters are recomputed if the constant is changed between
+// evaluations.
+constexpr double LEGACY_C1RHOCRIT_IA = 0.01389;
+
+static double c1rhocrit_ia_value = LEGACY_C1RHOCRIT_IA;
+
+void init_ia_c1rhocrit(const double c1rhocrit_ia)
+{ // sets the TATT normalisation C1 * rho_crit used by IA_A1_Z1Z2/IA_A2_Z1Z2
+  static constexpr std::string_view fname = "init_ia_c1rhocrit"sv;
+  debug("{}: {}", fname, errbegins);
+  if (!std::isfinite(c1rhocrit_ia) || !(c1rhocrit_ia > 0.0)) [[unlikely]] {
+    critical(errorns2, fname, "c1rhocrit_ia", c1rhocrit_ia);
+    exit(1);
+  }
+  if (fdiff(c1rhocrit_ia_value, c1rhocrit_ia)) {
+    nuisance.random_ia = RandomNumber::get_instance().get();
+  }
+  c1rhocrit_ia_value = c1rhocrit_ia;
+  nuisance.c1rhocrit_ia = c1rhocrit_ia;
+  debug(debugsel, fname, "nuisance.c1rhocrit_ia", c1rhocrit_ia);
+  debug("{}: {}", fname, errends);
+  return;
+}
+
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+
 void init_point_mass_model(const int point_mass_model)
 { // selects the gamma_t point-mass kernel, see PointMass::get_pm
   static constexpr std::string_view fname = "init_point_mass_model"sv;
@@ -1671,7 +1722,7 @@ void set_nuisance_IA(vector A1, vector A2, vector BTA)
   // ia[2][MAX_SIZE_ARRAYS] = b_ta_z[MAX_SIZE_ARRAYS]
 
   int cache_update = 0;
-  nuisance.c1rhocrit_ia = 0.01389;
+  nuisance.c1rhocrit_ia = c1rhocrit_ia_value; // 0.01389 unless init_ia_c1rhocrit
   
   if (nuisance.IA == IA_REDSHIFT_BINNING)
   {

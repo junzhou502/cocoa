@@ -570,6 +570,14 @@ void init_IA(
     const int IA_REDSHIFT_EVOL
   );
 
+// TATT normalisation C1 * rho_crit (h^-2). Legacy CosmoLike value 0.01389;
+// the CosmoSIS value is 0.013873073650776856. Must be finite and > 0. If never
+// called, set_nuisance_IA keeps the legacy constant, so the compiled behaviour
+// is unchanged for every project that does not call this.
+void init_ia_c1rhocrit(
+    const double c1rhocrit_ia
+  );
+
 void init_point_mass_model(
     const int point_mass_model
   );
