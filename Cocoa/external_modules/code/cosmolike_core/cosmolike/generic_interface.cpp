@@ -2264,6 +2264,7 @@ void IP::set_inv_cov(std::string cov_filename)
       }
     }
   }
+  this->is_pm_marg_set_ = false; // a new covariance has no point-mass marginalisation
   this->is_inv_cov_set_ = true;
   debug("{}: {}", fname, errends);
 }
@@ -2352,6 +2353,231 @@ vector IP::sqzd_theory_data_vector(vector input) const
   debug("{}: {}", fname, errends);
   return result;
 }
+
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Analytic point-mass marginalisation (see the comment in the IP class)
+// ---------------------------------------------------------------------------
+
+void IP::set_pm_marg(
+    matrix U,
+    arma::Col<int> lens_ids,
+    matrix index_map,
+    matrix S,
+    const double sigma_a
+  )
+{
+  static constexpr std::string_view fname = "IP::set_pm_marg"sv;
+  debug("{}: {}", fname, errbegins);
+  if (!(this->is_mask_set_) || !(this->is_inv_cov_set_)) [[unlikely]] {
+    critical(errornset, fname, "mask and inverse covariance"); exit(1);
+  }
+  if (this->is_pm_marg_set_) [[unlikely]] {
+    critical("{}: point-mass marginalisation is already set (once per covariance)", fname);
+    exit(1);
+  }
+  if (!std::isfinite(sigma_a)) [[unlikely]] {
+    critical("{}: sigma_a = {} is not finite", fname, sigma_a); exit(1);
+  }
+  const int r = static_cast<int>(U.n_cols);
+  if (static_cast<int>(U.n_rows) != this->ndata_ || r < 1 ||
+      r > redshift.clustering_nbin || static_cast<int>(lens_ids.n_elem) != r ||
+      4 != static_cast<int>(index_map.n_cols)) [[unlikely]] {
+    critical("{}: template is {} x {} with {} lens ids (ndata = {}, max {} columns)",
+      fname, U.n_rows, U.n_cols, lens_ids.n_elem, this->ndata_, redshift.clustering_nbin);
+    exit(1);
+  }
+  if (!U.is_finite()) [[unlikely]] {
+    critical("{}: template has non-finite entries", fname); exit(1);
+  }
+  // the template lives in the squeezed (kept-element) space only
+  matrix Us(this->ndata_sqzd_, r, arma::fill::zeros);
+  for (int i=0; i<this->ndata_; i++) {
+    if (this->mask_(i) > 0.99) {
+      Us.row(this->get_index_sqzd(i)) = U.row(i);
+    }
+    else {
+      for (int c=0; c<r; c++) {
+        if (U(i,c) != 0.0) [[unlikely]] {
+          critical("{}: template is non-zero on masked element {}", fname, i); exit(1);
+        }
+      }
+    }
+  }
+  for (int c=0; c<r; c++) {
+    if (!(arma::norm(Us.col(c)) > 0.0)) [[unlikely]] {
+      critical("{}: template column {} is zero", fname, c); exit(1);
+    }
+  }
+
+  // Woodbury in the squeezed space with a Cholesky factor of the r x r X:
+  // cond(C) ~ 1e10 and sigma_a^2 U U^T is ~1e9 times the gamma_t variances, so
+  // C + C_pm (cond ~ 1e14 or more) is never formed or inverted.
+  this->inv_cov_masked_nopm_ = this->inv_cov_masked_;
+  this->inv_cov_masked_sqzd_nopm_ = this->inv_cov_masked_sqzd_;
+  const matrix& P0 = this->inv_cov_masked_sqzd_nopm_;
+  const matrix PU = P0 * Us;
+  matrix Mm = Us.t() * PU;
+  Mm = 0.5*(Mm + Mm.t());
+  matrix X = Mm;
+  if (sigma_a > 0.0) {
+    X.diag() += 1.0/(sigma_a*sigma_a);
+  }
+  matrix R;
+  if (!arma::chol(R, X)) [[unlikely]] {   // X = R^T R, R upper triangular
+    critical("{}: X = sigma_a^-2 I + U^T C^-1 U is not SPD", fname); exit(1);
+  }
+  const matrix Z = arma::solve(arma::trimatl(R.t()), PU.t());
+  const matrix Y = arma::solve(arma::trimatu(R), Z);   // Y = X^-1 (P0 U)^T
+  matrix P = P0 - PU*Y;
+  P = 0.5*(P + P.t());
+  if (!P.is_finite()) [[unlikely]] {
+    critical("{}: marginalised precision has non-finite entries", fname); exit(1);
+  }
+  double logdet_X = 0.0;
+  for (int c=0; c<r; c++) {
+    logdet_X += std::log(R(c,c));
+  }
+  logdet_X *= 2.0;
+  double logdet_C = 0.0;
+  if (!arma::log_det_sympd(logdet_C, this->cov_masked_sqzd_)) [[unlikely]] {
+    critical("{}: log det of the squeezed covariance failed", fname); exit(1);
+  }
+
+  this->inv_cov_masked_sqzd_ = P;
+  this->inv_cov_masked_.zeros();
+  for (int i=0; i<this->ndata_; i++) {
+    if (this->mask_(i) > 0.99) {
+      for (int j=0; j<this->ndata_; j++) {
+        if (this->mask_(j) > 0.99) {
+          this->inv_cov_masked_(i,j) =
+            P(this->get_index_sqzd(i), this->get_index_sqzd(j));
+        }
+      }
+    }
+  }
+
+  // Post-check (r x r only). Exactly, sigma_a^2 U^T P U = I - sigma_a^-2 X^-1;
+  // the computed difference is cancellation noise ~ eps sigma_a^2 M_LL at the
+  // DES sigma_a = 1e4 (CosmoSIS shows 2e-7 to 4e-6 at the 462 cuts). The stop
+  // threshold has a floor of 1e-8 so that runs with sigma_a <= 1, where the
+  // noise is no longer set by that cancellation, are not stopped by a bound
+  // meant for large sigma_a; a wrong P gives O(1). Both numbers are logged.
+  const matrix UPU = Us.t() * (P * Us);
+  if (sigma_a > 0.0) {
+    const double s2 = sigma_a*sigma_a;
+    const matrix E = s2*UPU -
+      (arma::eye<matrix>(r, r) - arma::inv_sympd(X)/s2);
+    const double e_f = arma::abs(E).max();
+    const double tol = 1.0e3*arma::datum::eps*s2*arma::max(Mm.diag());
+    info("{}: post-check max|sigma_a^2 U^T P U - (I - sigma_a^-2 X^-1)| = {:.3e} "
+         "(1e3 eps sigma_a^2 max M_LL = {:.3e}; stop above {:.3e})", fname, e_f, tol,
+         std::max(tol, 1.0e-8));
+    if (!(e_f <= std::max(tol, 1.0e-8))) [[unlikely]] {
+      critical("{}: post-check failed ({:.3e} > {:.3e})", fname, e_f,
+        std::max(tol, 1.0e-8));
+      exit(1);
+    }
+  }
+  for (int c=0; c<r; c++) {
+    const double u2 = arma::dot(Us.col(c), Us.col(c));
+    info("{}: lens bin {} (column {}): M_LL = {:.10e}, u^T P u/|u|^2 = {:.6e} "
+         "(expected {:.6e})", fname, lens_ids(c) + 1, c, Mm(c,c), UPU(c,c)/u2,
+         sigma_a > 0.0 ? 1.0/(sigma_a*sigma_a*u2) : 0.0);
+  }
+
+  this->pm_marg_U_ = U;
+  this->pm_marg_lens_ids_ = lens_ids;
+  this->pm_marg_index_map_ = index_map;
+  this->pm_marg_S_ = S;
+  this->pm_marg_X_ = X;
+  this->pm_marg_sigma_a_ = sigma_a;
+  this->pm_marg_logdet_cov_ = logdet_C;
+  this->pm_marg_logdet_X_ = logdet_X;
+  this->is_pm_marg_set_ = true;
+  info("{}: r = {} template columns, sigma_a = {:.17g}, ndata kept = {}, "
+       "logdet C_kept = {:.17g}, logdet X = {:.17g}", fname, r, sigma_a,
+       this->ndata_sqzd_, logdet_C, logdet_X);
+  debug("{}: {}", fname, errends);
+}
+
+// The getters refuse to run before set_pm_marg (they would return empty or
+// stale matrices).
+#define PM_MARG_REQUIRE_SET(fn) \
+  if (!(this->is_pm_marg_set_)) [[unlikely]] { \
+    critical(errornset, fn, "point-mass marginalisation"); exit(1); \
+  }
+
+matrix IP::get_pm_marg_template() const
+{
+  PM_MARG_REQUIRE_SET("IP::get_pm_marg_template");
+  return this->pm_marg_U_;
+}
+
+arma::Col<int> IP::get_pm_marg_lens_ids() const
+{
+  PM_MARG_REQUIRE_SET("IP::get_pm_marg_lens_ids");
+  return this->pm_marg_lens_ids_;
+}
+
+matrix IP::get_pm_marg_index_map() const
+{
+  PM_MARG_REQUIRE_SET("IP::get_pm_marg_index_map");
+  return this->pm_marg_index_map_;
+}
+
+matrix IP::get_pm_marg_sigcrit_inv() const
+{
+  PM_MARG_REQUIRE_SET("IP::get_pm_marg_sigcrit_inv");
+  return this->pm_marg_S_;
+}
+
+matrix IP::get_cov_pm_masked() const
+{
+  PM_MARG_REQUIRE_SET("IP::get_cov_pm_masked");
+  if (!(this->pm_marg_sigma_a_ > 0.0)) [[unlikely]] {
+    critical("{}: sigma_a = {} <= 0 is the infinite prior; C_pm is not defined",
+      "IP::get_cov_pm_masked", this->pm_marg_sigma_a_);
+    exit(1);
+  }
+  const double s2 = this->pm_marg_sigma_a_*this->pm_marg_sigma_a_;
+  return s2*(this->pm_marg_U_*this->pm_marg_U_.t());
+}
+
+matrix IP::get_inv_cov_masked_nopm() const
+{
+  PM_MARG_REQUIRE_SET("IP::get_inv_cov_masked_nopm");
+  return this->inv_cov_masked_nopm_;
+}
+
+matrix IP::get_inv_cov_masked_sqzd_nopm() const
+{
+  PM_MARG_REQUIRE_SET("IP::get_inv_cov_masked_sqzd_nopm");
+  return this->inv_cov_masked_sqzd_nopm_;
+}
+
+matrix IP::get_pm_marg_X() const
+{
+  PM_MARG_REQUIRE_SET("IP::get_pm_marg_X");
+  return this->pm_marg_X_;
+}
+
+vector IP::get_pm_marg_logdet() const
+{
+  PM_MARG_REQUIRE_SET("IP::get_pm_marg_logdet");
+  vector res(4);
+  res(0) = this->pm_marg_logdet_cov_;
+  res(1) = this->pm_marg_logdet_X_;
+  res(2) = static_cast<double>(this->pm_marg_U_.n_cols);
+  res(3) = this->pm_marg_sigma_a_;
+  return res;
+}
+
+#undef PM_MARG_REQUIRE_SET
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
@@ -2783,6 +3009,286 @@ double PointMass::get_pm(
   return 4*M_PI*Goverc2_legacy*this->pm_[zl]*1.e+13*
     g_tomo(a_lens, zs)/(theta*theta)/(chi_lens*a_lens*a_lens*a_lens);
 
+}
+
+// ---------------------------------------------------------------------------
+// CosmoLike-native template amplitudes for the analytic point-mass
+// marginalisation (des_y3 likelihood option pm_marg_sigcrit_inv = "cosmolike")
+// ---------------------------------------------------------------------------
+//
+//   S(L,s) = 4 pi Goverc2_exact 1e13 beta_fid(L,s)   (CosmoSIS sigma_crit_inv units)
+//
+//   beta_fid(L,s) = Int dz n_L(z) (1+z) g_fid(z,s)/chi_fid(z) / Int dz n_L(z)
+//   g_fid(z_l,s)  = Int_{z_l} dz_s n_s(z_s) (1 - chi_fid(z_l)/chi_fid(z_s))
+//
+// which is the beta of pm_beta_lens_averaged (point_mass_model 1) with the live
+// chi(a) replaced by a fixed flat matter + Lambda background:
+//   chi_fid(z) = Int_0^z dz'/E(z'),  E = sqrt(1 - Omega_m + Omega_m (1+z')^3)
+// in c/H0 units (no radiation, no neutrinos: the E(z) of CosmoSIS
+// add_gammat_point_mass.get_Dcom_array; H0 cancels in beta and is only checked),
+// computed here without touching `cosmology` (chi() would read the live table).
+//
+// n_L = pf_photoz and n_s = zdistr_photoz (CosmoLike-native n(z) semantics):
+// the lens weight is pf_photoz on the support of pm_beta_lens_averaged,
+// [zlo, zhi] with zlo = max(stretched/shifted lower end - 2|dz|, zmin), skipping
+// non-positive values as it does, and normalised by its integral (den); the
+// source n(z) are used as g_tomo uses them (histogram-sum normalisation, no
+// renormalisation to a unit integral).
+//
+// zmin (argument, > 0): the lens integrand goes like n_L(z)/chi(z) ~ 1/z as
+// z -> 0, so beta depends on where the integral starts whenever the shifted or
+// stretched lens n(z) reaches z ~ 0 (DES Y3 MagLim lens bin 2 at stretch 1.306:
+// 7% between 1e-3 and 5e-3). pm_beta_lens_averaged clamps at 1e-3 (zmin = 1e-3
+// reproduces that support); CosmoSIS add_gammat_point_mass.py integrates from
+// the first node of its lens n(z) grid (the first bin midpoint, 0.005 for
+// MagLim), which is the des_y3 default (pm_marg_native_zmin: nz_first_node).
+//
+// The fiducial photo-z state (dz_lens, stretch_lens, dz_source) is set in the
+// nuisance.photoz globals that pf_photoz / zdistr_photoz read at call time, and
+// the saved values are restored exactly before returning. No RandomNumber is
+// drawn and no cache key is changed: both n(z) functions key their tables on
+// redshift.random_* only (their first call after set_*_sample rebuilds the same
+// table deterministically, as the first evaluation would), and nothing that
+// caches on nuisance.random_photoz_* (g_tomo, pm_beta_lens_averaged, zmean) is
+// called. The routine is serial (no OpenMP), so it is thread-count independent.
+//
+// Quadrature (everything piecewise smooth is integrated piece by piece, so the
+// result converges geometrically in the node counts):
+//   * lens integral: Gauss-Legendre with nodes_lens nodes on every sub-interval of
+//     [zlo, zhi] between consecutive break points. The break points are the
+//     mapped lens spline knots (z_k - zmean) s + zmean + dz, where pf_photoz is a
+//     piecewise cubic with jumps at its support ends, and the mapped source knots
+//     z_k + dz_s, where g_fid has kinks in a high derivative;
+//   * g_fid: Gauss-Legendre with nodes_source nodes on every interval between
+//     consecutive source knots above z_l (the interval holding z_l from z_l);
+//   * chi_fid: Gauss-Legendre with nodes_chi nodes on [0, z] (the integrand is
+//     analytic, singularities at distance > 1 from [0, 3.5]).
+// Defaults of the des_y3 binding: 16 / 16 / 32 nodes; doubling all three changes S
+// by < 1e-8 relative (task desy3-pm-marg-20261002).
+//
+// Goverc2_exact is the constant of PointMass::get_pm (kept local there so that
+// function is untouched).
+static constexpr double pm_marg_Goverc2_exact = 1.596242905e-23;
+
+static double pm_marg_chi_fid(
+    const double z,
+    const double omega_m,
+    const int n,
+    const gsl_integration_glfixed_table* w
+  )
+{ // chi_fid(z) in c/H0 units
+  const double omega_l = 1.0 - omega_m;
+  double sum = 0.0;
+  for (int k=0; k<n; k++) {
+    double x, wx;
+    gsl_integration_glfixed_point(0.0, z, k, &x, &wx, w);
+    const double opz = 1.0 + x;
+    sum += wx/std::sqrt(omega_l + omega_m*(opz*opz*opz));
+  }
+  return sum;
+}
+
+matrix compute_pm_sigcrit_inv_cosmolike(
+    const double omega_m_fid,
+    const double h0_fid,
+    vector dz_lens,
+    vector stretch_lens,
+    vector dz_source,
+    const double zmin,
+    const int nodes_lens,
+    const int nodes_source,
+    const int nodes_chi
+  )
+{
+  static constexpr std::string_view fname = "compute_pm_sigcrit_inv_cosmolike"sv;
+  debug("{}: {}", fname, errbegins);
+  const int NL = redshift.clustering_nbin;
+  const int NS = redshift.shear_nbin;
+  if (NL < 1 || NS < 1 || NL > MAX_SIZE_ARRAYS || NS > MAX_SIZE_ARRAYS ||
+      NULL == redshift.clustering_zdist_table ||
+      NULL == redshift.shear_zdist_table) [[unlikely]] {
+    critical(errornset, fname, "lens and source n(z)"); exit(1);
+  }
+  if (static_cast<int>(dz_lens.n_elem) != NL ||
+      static_cast<int>(stretch_lens.n_elem) != NL ||
+      static_cast<int>(dz_source.n_elem) != NS) [[unlikely]] {
+    critical("{}: fiducial photo-z lists have {} / {} / {} entries (need {} / {} / {})",
+      fname, dz_lens.n_elem, stretch_lens.n_elem, dz_source.n_elem, NL, NL, NS);
+    exit(1);
+  }
+  if (!dz_lens.is_finite() || !stretch_lens.is_finite() || !dz_source.is_finite() ||
+      !(stretch_lens.min() > 0.0)) [[unlikely]] {
+    critical("{}: fiducial photo-z values must be finite (stretch > 0)", fname); exit(1);
+  }
+  if (!(std::isfinite(omega_m_fid) && omega_m_fid > 0.0 && omega_m_fid <= 1.0)) [[unlikely]] {
+    critical("{}: Omega_m_fid = {} not in (0, 1]", fname, omega_m_fid); exit(1);
+  }
+  if (!(std::isfinite(h0_fid) && h0_fid > 0.0)) [[unlikely]] {
+    critical("{}: H0_fid = {} must be finite and positive", fname, h0_fid); exit(1);
+  }
+  if (!(std::isfinite(zmin) && zmin > 0.0)) [[unlikely]] {
+    critical("{}: zmin = {} must be finite and positive", fname, zmin); exit(1);
+  }
+  if (nodes_lens < 2 || nodes_source < 2 || nodes_chi < 2 || nodes_lens > 4096 ||
+      nodes_source > 4096 || nodes_chi > 4096) [[unlikely]] {
+    critical("{}: node counts {} / {} / {} not in [2, 4096]", fname, nodes_lens,
+      nodes_source, nodes_chi);
+    exit(1);
+  }
+
+  // save the photo-z globals and set the fiducial state
+  double save_dzl[MAX_SIZE_ARRAYS], save_strl[MAX_SIZE_ARRAYS], save_dzs[MAX_SIZE_ARRAYS];
+  for (int i=0; i<NL; i++) {
+    save_dzl[i] = nuisance.photoz[1][0][i];
+    save_strl[i] = nuisance.photoz[1][1][i];
+    nuisance.photoz[1][0][i] = dz_lens(i);
+    nuisance.photoz[1][1][i] = stretch_lens(i);
+  }
+  for (int j=0; j<NS; j++) {
+    save_dzs[j] = nuisance.photoz[0][0][j];
+    nuisance.photoz[0][0][j] = dz_source(j);
+  }
+
+  gsl_integration_glfixed_table* wl = malloc_gslint_glfixed(nodes_lens);
+  gsl_integration_glfixed_table* ws = malloc_gslint_glfixed(nodes_source);
+  gsl_integration_glfixed_table* wc = malloc_gslint_glfixed(nodes_chi);
+
+  // spline knots of pf_photoz / zdistr_photoz (the z_v tables they build)
+  const int nzl = redshift.clustering_nzbins;
+  const int nzs = redshift.shear_nzbins;
+  const double dzh_l = (redshift.clustering_zdist_zmax_all -
+                        redshift.clustering_zdist_zmin_all)/((double) nzl);
+  const double dzh_s = (redshift.shear_zdist_zmax_all -
+                        redshift.shear_zdist_zmin_all)/((double) nzs);
+  std::vector<double> mid_l(nzl), mid_s(nzs);
+  for (int k=0; k<nzl; k++) {
+    mid_l[k] = redshift.clustering_zdist_zmin_all + (k + 0.5)*dzh_l;
+  }
+  for (int k=0; k<nzs; k++) {
+    mid_s[k] = redshift.shear_zdist_zmin_all + (k + 0.5)*dzh_s;
+  }
+
+  // per source bin: knots t_k = mid_k + dz_s and suffix sums over the full knot
+  // intervals of A = Int n_s and B = Int n_s/chi_fid, so that for t_k <= z_l < t_k+1
+  //   g_fid(z_l) = Int_{z_l}^{t_k+1} n_s (chi_s - chi_l)/chi_s + SA[k+1] - chi_l SB[k+1]
+  std::vector<std::vector<double>> tk(NS, std::vector<double>(nzs));
+  std::vector<std::vector<double>> SA(NS, std::vector<double>(nzs, 0.0));
+  std::vector<std::vector<double>> SB(NS, std::vector<double>(nzs, 0.0));
+  for (int j=0; j<NS; j++) {
+    for (int k=0; k<nzs; k++) {
+      tk[j][k] = mid_s[k] + dz_source(j);
+    }
+    for (int k=nzs-2; k>=0; k--) {
+      double a = 0.0, b = 0.0;
+      for (int q=0; q<nodes_source; q++) {
+        double x, wx;
+        gsl_integration_glfixed_point(tk[j][k], tk[j][k+1], q, &x, &wx, ws);
+        const double ns = zdistr_photoz(x, j);
+        a += wx*ns;
+        b += wx*ns/pm_marg_chi_fid(x, omega_m_fid, nodes_chi, wc);
+      }
+      SA[j][k] = SA[j][k+1] + a;
+      SB[j][k] = SB[j][k+1] + b;
+    }
+  }
+  auto g_fid = [&](const double zl, const double chi_l, const int j) -> double {
+    const std::vector<double>& t = tk[j];
+    if (!(zl < t[nzs-1])) {
+      return 0.0;
+    }
+    if (zl <= t[0]) {
+      return SA[j][0] - chi_l*SB[j][0];
+    }
+    const int k = static_cast<int>(std::upper_bound(t.begin(), t.end(), zl) - t.begin()) - 1;
+    double part = 0.0;
+    for (int q=0; q<nodes_source; q++) {
+      double x, wx;
+      gsl_integration_glfixed_point(zl, t[k+1], q, &x, &wx, ws);
+      const double chi_s = pm_marg_chi_fid(x, omega_m_fid, nodes_chi, wc);
+      part += wx*zdistr_photoz(x, j)*(chi_s - chi_l)/chi_s;
+    }
+    return part + SA[j][k+1] - chi_l*SB[j][k+1];
+  };
+
+  matrix S(NL, NS, arma::fill::zeros);
+  for (int i=0; i<NL; i++) {
+    // the support of pm_beta_lens_averaged, at the fiducial photo-z state, with
+    // its 1e-3 clamp replaced by zmin
+    const double zme = redshift.clustering_zdist_zmean[i];
+    const double str = nuisance.photoz[1][1][i];
+    const double shf = std::fabs(nuisance.photoz[1][0][i]);
+    const double zlo = fmax((redshift.clustering_zdist_zmin[i]-zme)*str + zme
+                            - 2.0*shf, zmin);
+    const double zhi = (redshift.clustering_zdist_zmax[i]-zme)*str + zme
+                            + 2.0*shf;
+    if (!(zhi > zlo)) [[unlikely]] {
+      critical("{}: empty lens n(z) support on bin {}", fname, i); exit(1);
+    }
+    std::vector<double> bp = {zlo, zhi};
+    for (int k=0; k<nzl; k++) {
+      const double t = (mid_l[k] - zme)*str + zme + nuisance.photoz[1][0][i];
+      if (t > zlo && t < zhi) {
+        bp.push_back(t);
+      }
+    }
+    for (int j=0; j<NS; j++) {
+      for (int k=0; k<nzs; k++) {
+        if (tk[j][k] > zlo && tk[j][k] < zhi) {
+          bp.push_back(tk[j][k]);
+        }
+      }
+    }
+    std::sort(bp.begin(), bp.end());
+    bp.erase(std::unique(bp.begin(), bp.end()), bp.end());
+
+    double den = 0.0;
+    double num[MAX_SIZE_ARRAYS];
+    for (int j=0; j<NS; j++) {
+      num[j] = 0.0;
+    }
+    for (size_t m=0; m+1<bp.size(); m++) {
+      for (int q=0; q<nodes_lens; q++) {
+        double z, wz;
+        gsl_integration_glfixed_point(bp[m], bp[m+1], q, &z, &wz, wl);
+        const double nz = pf_photoz(z, i);
+        if (!(nz > 0.0)) {
+          continue;            // as pm_beta_lens_averaged: skip non-positive n(z)
+        }
+        const double chi_l = pm_marg_chi_fid(z, omega_m_fid, nodes_chi, wc);
+        if (!(chi_l > 0.0)) [[unlikely]] {
+          continue;
+        }
+        den += wz*nz;
+        const double radial = wz*nz*(1.0 + z)/chi_l;
+        for (int j=0; j<NS; j++) {
+          num[j] += radial*g_fid(z, chi_l, j);
+        }
+      }
+    }
+    if (!(den > 0.0)) [[unlikely]] {
+      critical("{}: lens n(z) normalization is zero on bin {}", fname, i); exit(1);
+    }
+    for (int j=0; j<NS; j++) {
+      S(i,j) = 4*M_PI*pm_marg_Goverc2_exact*1.e+13*(num[j]/den);
+    }
+  }
+  gsl_integration_glfixed_table_free(wl);
+  gsl_integration_glfixed_table_free(ws);
+  gsl_integration_glfixed_table_free(wc);
+
+  // restore the photo-z globals exactly
+  for (int i=0; i<NL; i++) {
+    nuisance.photoz[1][0][i] = save_dzl[i];
+    nuisance.photoz[1][1][i] = save_strl[i];
+  }
+  for (int j=0; j<NS; j++) {
+    nuisance.photoz[0][0][j] = save_dzs[j];
+  }
+  if (!S.is_finite() || S.min() < 0.0) [[unlikely]] {
+    critical("{}: non-finite or negative template amplitude", fname); exit(1);
+  }
+  debug("{}: {}", fname, errends);
+  return S;
 }
 
 // ---------------------------------------------------------------------------

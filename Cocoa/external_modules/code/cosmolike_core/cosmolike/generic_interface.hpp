@@ -202,10 +202,50 @@ private:
     arma::Mat<double> get_inv_cov_masked_sqzd() const {
       return this->inv_cov_masked_sqzd_;
     }
+
+    // ------------------------------------------------------------------------
+    // Analytic point-mass marginalisation (CosmoSIS DES Y3 2pt_point_mass.py,
+    // do_pm_marg = do_pm_sigcritinv = T): the template U (ndata x r, one column
+    // per lens bin with a kept gamma_t element) is added to the covariance as
+    // C_pm = sigma_a^2 U U^T through the Woodbury identity in the squeezed
+    // space, P = P0 - P0 U X^-1 U^T P0 = (C + sigma_a^2 U U^T)^-1 with
+    // X = sigma_a^-2 I + U^T P0 U (X = U^T P0 U if sigma_a <= 0, the infinite
+    // prior). Only inv_cov_masked_ and inv_cov_masked_sqzd_ change; cov_masked_*
+    // stay the original matrix (CosmoSIS cov_orig; the baryon-PCA Cholesky in
+    // compute_baryon_pcas_Mx2pt_N uses them). Set once, after set_inv_cov, by
+    // init_pm_marg_Mx2pt_N. Nothing here runs unless that is called.
+    // ------------------------------------------------------------------------
+    void set_pm_marg(arma::Mat<double> U, arma::Col<int> lens_ids,
+                     arma::Mat<double> index_map, arma::Mat<double> S,
+                     const double sigma_a);
+
+    bool is_pm_marg_set() const {
+      return this->is_pm_marg_set_;
+    }
+    arma::Mat<double> get_pm_marg_template() const;     // U, ndata x r
+    arma::Col<int> get_pm_marg_lens_ids() const;        // 0-based, ascending
+    arma::Mat<double> get_pm_marg_index_map() const;    // rows (index,zl,zs,theta)
+    arma::Mat<double> get_pm_marg_sigcrit_inv() const;  // S, nlens x nsource
+    arma::Mat<double> get_cov_pm_masked() const;        // sigma_a^2 U U^T
+    arma::Mat<double> get_inv_cov_masked_nopm() const;  // P0 (ndata x ndata)
+    arma::Mat<double> get_inv_cov_masked_sqzd_nopm() const;
+    arma::Mat<double> get_pm_marg_X() const;            // r x r
+    arma::Col<double> get_pm_marg_logdet() const;  // {logdet C_sqzd, logdet X, r, sigma_a}
   private:
     bool is_mask_set_ = false;
     bool is_data_set_ = false;
     bool is_inv_cov_set_ = false;
+    bool is_pm_marg_set_ = false;
+    double pm_marg_sigma_a_ = 0.0;
+    double pm_marg_logdet_cov_ = 0.0;
+    double pm_marg_logdet_X_ = 0.0;
+    arma::Mat<double> pm_marg_U_;
+    arma::Col<int> pm_marg_lens_ids_;
+    arma::Mat<double> pm_marg_index_map_;
+    arma::Mat<double> pm_marg_S_;
+    arma::Mat<double> pm_marg_X_;
+    arma::Mat<double> inv_cov_masked_nopm_;
+    arma::Mat<double> inv_cov_masked_sqzd_nopm_;
     int ndata_ = 0;
     int ndata_sqzd_ = 0;
     std::string mask_filename_;
@@ -692,6 +732,25 @@ void init_ntomo_powerspectra();
 
 arma::Col<double> compute_binning_real_space();
 
+// CosmoLike-native point-mass template amplitudes for the analytic point-mass
+// marginalisation: S(L,s) = 4 pi (G/c^2) 1e13 beta_fid(L,s) in the units of
+// CosmoSIS sigma_crit_inv_L_s, at a fixed flat matter + Lambda background
+// (Omega_m_fid, no radiation or neutrinos) and the fiducial photo-z state given
+// as arguments; the lens integral starts at max(support lower end, zmin). See
+// the definition in generic_interface.cpp. Leaves every global and cache key as
+// it found them.
+arma::Mat<double> compute_pm_sigcrit_inv_cosmolike(
+    const double omega_m_fid,
+    const double h0_fid,
+    arma::Col<double> dz_lens,
+    arma::Col<double> stretch_lens,
+    arma::Col<double> dz_source,
+    const double zmin,
+    const int nodes_lens,
+    const int nodes_source,
+    const int nodes_chi
+  );
+
 arma::Col<double> compute_add_baryons_pcs(arma::Col<double> Q, arma::Col<double> dv);
 
 // ---------------------------------------------------------------------------
@@ -968,6 +1027,111 @@ arma::Col<double> compute_add_calib_and_set_mask_Mx2pt_N(
   }
   debug("{}<{},{},{}>: {}", fname, N, M, P, errends);
   return data_vector;
+}
+
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+
+// Analytic point-mass marginalisation: build the template of CosmoSIS
+// likelihood/2pt/2pt_point_mass/2pt_point_mass.py (do_pm_sigcritinv = T) on
+// the CosmoLike data vector and hand it to IP::set_pm_marg. Column c belongs to
+// the c-th lens bin (ascending, 0-based ids in get_pm_marg_lens_ids) that keeps
+// at least one gamma_t element after the mask; on every kept gamma_t element
+// (zl, zs, theta_i) of that bin U(index, c) = S(zl,zs)/theta_i^2, with theta in
+// radians from compute_binning_real_space() (the theta of PointMass::get_pm),
+// and 0 elsewhere. No (1+m) factor: CosmoSIS adds the point mass after
+// shear_m_bias, as point_mass_model 1 does. S is in CosmoSIS sigma_crit_inv
+// units (1e13 beta), so the template multiplies amplitudes in 1e13 Msun/h, the
+// units of sigma_a. The loop is the gamma_t loop of add_calib_and_set_mask_X_N.
+// It must stay below compute_data_vector_Mx2pt_N_starts, which has no forward
+// declaration and which ADL cannot find at instantiation (its argument is an
+// arma type, not a cosmolike_interface one).
+template <int N, int M>
+void init_pm_marg_Mx2pt_N(
+    arma::Mat<double> S,
+    const double sigma_a,
+    arma::Col<int>::fixed<M> ord
+  )
+{
+  static constexpr std::string_view fname = "init_pm_marg_Mx2pt_N"sv;
+  static_assert(0 == N, "analytic point-mass marginalisation is real space only (N = 0)");
+  static_assert(3 == M || 6 == M, "M must be 3 (3x2pt) or 6 (6x2pt)");
+  using spdlog::critical;
+  IP& survey = IP::get_instance();
+  if (!survey.is_mask_set() || !survey.is_inv_cov_set()) [[unlikely]] {
+    critical("{}: mask and covariance must be set first (init_data_*)", fname);
+    exit(1);
+  }
+  if (1 != like.shear_pos) [[unlikely]] {
+    critical("{}: the probe has no gamma_t (like.shear_pos = {})", fname, like.shear_pos);
+    exit(1);
+  }
+  if (static_cast<int>(S.n_rows) != redshift.clustering_nbin ||
+      static_cast<int>(S.n_cols) != redshift.shear_nbin) [[unlikely]] {
+    critical("{}: sigma_crit_inv table is {} x {} (needs {} x {})", fname,
+      S.n_rows, S.n_cols, redshift.clustering_nbin, redshift.shear_nbin);
+    exit(1);
+  }
+  if (!S.is_finite() || S.min() < 0.0) [[unlikely]] {
+    critical("{}: sigma_crit_inv must be finite and >= 0", fname);
+    exit(1);
+  }
+  const int ndata = survey.get_ndata();
+  const int start = compute_data_vector_Mx2pt_N_starts<N,M>(ord)(1);
+  const arma::Col<double> theta = compute_binning_real_space();
+
+  // lens bins that keep at least one gamma_t element -> compact column index
+  arma::Col<int> col(redshift.clustering_nbin);
+  col.fill(-1);
+  int nkept = 0;
+  for (int nz=0; nz<tomo.ggl_Npowerspectra; nz++) {
+    const int zl = ZL(nz);
+    for (int i=0; i<Ntable.Ntheta; i++) {
+      if (survey.get_mask(start + Ntable.Ntheta*nz + i)) {
+        col(zl) = 0;
+        nkept++;
+      }
+    }
+  }
+  int r = 0;
+  for (int l=0; l<redshift.clustering_nbin; l++) {
+    if (col(l) == 0) {
+      col(l) = r++;
+    }
+  }
+  if (0 == r) [[unlikely]] {
+    critical("{}: the mask keeps no gamma_t element", fname);
+    exit(1);
+  }
+  arma::Col<int> lens_ids(r);
+  for (int l=0; l<redshift.clustering_nbin; l++) {
+    if (col(l) >= 0) {
+      lens_ids(col(l)) = l;
+    }
+  }
+  arma::Mat<double> U(ndata, r, arma::fill::zeros);
+  arma::Mat<double> index_map(nkept, 4, arma::fill::zeros);
+  int k = 0;
+  for (int nz=0; nz<tomo.ggl_Npowerspectra; nz++) {
+    const int zl = ZL(nz);
+    const int zs = ZS(nz);
+    for (int i=0; i<Ntable.Ntheta; i++) {
+      const int index = start + Ntable.Ntheta*nz + i;
+      if (survey.get_mask(index)) {
+        U(index, col(zl)) = S(zl, zs)/(theta(i)*theta(i));
+        index_map(k, 0) = index;
+        index_map(k, 1) = zl;
+        index_map(k, 2) = zs;
+        index_map(k, 3) = theta(i);
+        k++;
+      }
+    }
+  }
+  survey.set_pm_marg(U, lens_ids, index_map, S, sigma_a);
 }
 
 // ---------------------------------------------------------------------------
